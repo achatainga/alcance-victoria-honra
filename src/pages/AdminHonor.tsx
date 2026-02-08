@@ -180,38 +180,6 @@ export default function HonorAdmin() {
 
     };
 
-    const generateWhatsAppLinkV2 = (plan: HonorPlan) => {
-        const honoreeNames = members
-            .filter(m => plan.honoreeIds.includes(m.id))
-            .map(m => m.fullName)
-            .join(', ');
-
-        const dateStr = plan.targetDate ? format(new Date(plan.targetDate), 'dd MMMM', { locale: es }) : 'Fecha por definir';
-
-        let message = `*HONRA ESPECIAL: ${plan.title}* 👑\n\n` +
-            `Familia, estaremos honrando a: *${honoreeNames}* el día ${dateStr}.\n\n` +
-            `${plan.publicMessage}\n\n`;
-
-        if (plan.financialTarget && plan.financialTarget > 0) {
-            message += `*Meta de Ofrenda:* $${plan.financialTarget.toFixed(2)}\n\n`;
-        }
-
-        if (plan.pagoMovil || plan.qrUrl) {
-            message += `*DATOS PARA APORTAR:*\n`;
-            if (plan.pagoMovil) {
-                if (plan.pagoMovil.bank) message += `🏦 ${plan.pagoMovil.bank}\n`;
-                if (plan.pagoMovil.phone) message += `📱 ${plan.pagoMovil.phone}\n`;
-                if (plan.pagoMovil.cedula) message += `🆔 ${plan.pagoMovil.cedula}\n`;
-            }
-            if (plan.qrUrl) {
-                message += `(Ver QR en la App)\n`;
-            }
-        }
-
-        message += `\n¡No faltes!`;
-
-        return `https://wa.me/?text=${encodeURIComponent(message)}`;
-    }
 };
 
 return (
