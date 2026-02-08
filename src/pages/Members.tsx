@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Member {
     id: string;
@@ -23,6 +24,9 @@ interface Member {
 }
 
 export default function Members() {
+    const { user } = useAuth();
+    const isAdmin = user?.role === 'super_admin' || user?.role === 'admin';
+
     const [members, setMembers] = useState<Member[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -136,13 +140,15 @@ export default function Members() {
                         {filteredMembers.length}
                     </span>
                 </h1>
-                <button
-                    onClick={() => { resetForm(); setShowModal(true); }}
-                    className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold py-2 px-4 rounded-xl flex items-center gap-2 transition-colors"
-                >
-                    <UserPlus className="w-5 h-5" />
-                    Nuevo Miembro
-                </button>
+                {isAdmin && (
+                    <button
+                        onClick={() => { resetForm(); setShowModal(true); }}
+                        className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold py-2 px-4 rounded-xl flex items-center gap-2 transition-colors"
+                    >
+                        <UserPlus className="w-5 h-5" />
+                        Nuevo Miembro
+                    </button>
+                )}
             </div>
 
             {/* Filters */}
@@ -193,18 +199,20 @@ export default function Members() {
                                 <div className="flex items-center gap-2 text-xs text-slate-400 flex-wrap">
                                     <span className="capitalize bg-slate-800 px-2 py-0.5 rounded text-slate-300 border border-slate-700">{member.type.replace('-', ' ')}</span>
                                     <span className={`capitalize px-2 py-0.5 rounded border ${member.status === 'activo' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                                            member.status === 'graduado' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-                                                'bg-slate-800 text-slate-500 border-slate-700'
+                                        member.status === 'graduado' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                                            'bg-slate-800 text-slate-500 border-slate-700'
                                         }`}>{member.status}</span>
                                     {member.birthDate && <span>🎂 {format(new Date(member.birthDate), 'dd/MM/yyyy')}</span>}
                                     {member.email && <span className="flex items-center gap-1 text-slate-500"><Mail className="w-3 h-3" /> {member.email}</span>}
                                 </div>
                             </div>
                         </div>
-                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => handleEdit(member)} className="p-2 hover:bg-slate-800 rounded-lg text-blue-400"><Edit className="w-4 h-4" /></button>
-                            <button onClick={() => handleDelete(member.id)} className="p-2 hover:bg-slate-800 rounded-lg text-red-400"><Trash2 className="w-4 h-4" /></button>
-                        </div>
+                        {isAdmin && (
+                            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onClick={() => handleEdit(member)} className="p-2 hover:bg-slate-800 rounded-lg text-blue-400"><Edit className="w-4 h-4" /></button>
+                                <button onClick={() => handleDelete(member.id)} className="p-2 hover:bg-slate-800 rounded-lg text-red-400"><Trash2 className="w-4 h-4" /></button>
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>
@@ -227,13 +235,16 @@ export default function Members() {
 
                             {/* Email for Smart Linking */}
                             <div>
-                                <label className="block text-xs uppercase text-slate-500 font-bold mb-1">Email (Opcional - Para vincular cuenta)</label>
+                                <label className="block text-xs uppercase text-slate-500 font-bold mb-1">
+                                    Email {['varon-hogar', 'varona-hogar'].includes(formData.type) ? '(Opcional)' : '(Requerido para vincular)'}
+                                </label>
                                 <input
                                     type="email"
                                     className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-white"
                                     value={formData.email}
                                     onChange={e => setFormData({ ...formData, email: e.target.value })}
                                     placeholder="ejemplo@gmail.com"
+                                    required={!['varon-hogar', 'varona-hogar'].includes(formData.type)}
                                 />
                             </div>
 

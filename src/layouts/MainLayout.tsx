@@ -6,7 +6,8 @@ import {
     ShieldCheck,
     LogOut,
     Menu,
-    X
+    X,
+    Calendar
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -26,7 +27,8 @@ export default function MainLayout() {
     ];
 
     if (user?.role === 'super_admin' || user?.role === 'admin') {
-        navItems.push({ to: '/admin', label: 'Admin', icon: ShieldCheck });
+        navItems.push({ to: '/admin', label: 'Usuarios', icon: ShieldCheck });
+        navItems.push({ to: '/honor-admin', label: 'Planes de Honra', icon: Calendar });
     }
 
     return (

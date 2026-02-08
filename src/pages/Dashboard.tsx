@@ -1,145 +1,190 @@
 import { useAuth } from '../contexts/AuthContext';
-import {
-    Users,
-    Calendar as CalendarIcon,
-    Cake,
-    Trophy
-} from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { collection, query, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { differenceInDays, addYears, format } from 'date-fns';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { format, addDays, isSameDay, parseISO, getYear, setYear, isAfter, isBefore } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Calendar, Gift, Heart } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-interface Member {
+interface Birthday {
     id: string;
     fullName: string;
-    type: string;
     birthDate: string;
-    daysUntil?: number;
-    nextBirthday?: Date;
+    photoURL?: string;
+    type: string;
+}
+
+interface HonorPlan {
+    id: string;
+    title: string;
+    targetDate: string;
+    honoreeIds: string[];
+    description: string;
+    publicMessage: string;
+    financialTarget?: number;
+    contributionLink?: string;
+    qrUrl?: string;
 }
 
 export default function Dashboard() {
     const { user } = useAuth();
-    const [stats, setStats] = useState({
-        total: 0,
-        birthdaysMonth: 0,
-        upcomingEvents: 0
-    });
-    const [upcomingBirthdays, setUpcomingBirthdays] = useState<Member[]>([]);
+    const navigate = useNavigate();
+    const [birthdays, setBirthdays] = useState<Birthday[]>([]);
+    const [honorPlans, setHonorPlans] = useState<HonorPlan[]>([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchData = async () => {
-            const q = query(collection(db, 'members'));
-            const snapshot = await getDocs(q);
-            const members = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Member[];
+            if (!user) return;
+
+            // 1. Get Current User's Member ID (to exclude them from their own surprise)
+            let currentMemberId = '';
+            if (user.email) {
+                const qMember = query(collection(db, 'members'), where('email', '==', user.email));
+                const memberSnap = await getDocs(qMember);
+                if (!memberSnap.empty) {
+                    currentMemberId = memberSnap.docs[0].id;
+                }
+            }
+
+            // 2. Fetch Active Honor Plans
+            const qPlans = query(
+                collection(db, 'honor_plans'),
+                where('status', '==', 'active'),
+                orderBy('targetDate', 'asc')
+            );
+            const plansSnap = await getDocs(qPlans);
+            const allPlans = plansSnap.docs.map(d => ({ id: d.id, ...d.data() } as HonorPlan));
+
+            // FILTER: Hide plan if user is one of the honorees!
+            const visiblePlans = allPlans.filter(plan =>
+                !plan.honoreeIds.includes(currentMemberId)
+            );
+            setHonorPlans(visiblePlans);
+
+            // 3. Fetch Birthdays
+            const qMembers = query(collection(db, 'members'), where('status', '==', 'activo'));
+            const membersSnap = await getDocs(qMembers);
 
             const today = new Date();
-            const currentMonth = today.getMonth();
-            const upcoming: Member[] = [];
-            let monthCount = 0;
+            const next30Days = addDays(today, 30);
 
-            members.forEach(member => {
-                if (!member.birthDate) return;
+            const upcoming = membersSnap.docs
+                .map(doc => ({ id: doc.id, ...doc.data() } as Birthday))
+                .filter(m => {
+                    if (!m.birthDate) return false;
+                    const birth = parseISO(m.birthDate);
+                    const thisYear = new Date(birth);
+                    setYear(thisYear, getYear(today));
 
-                // Parse "YYYY-MM-DD"
-                // We only care about MM-DD for birthday calculation
-                const [, m, d] = member.birthDate.split('-').map(Number);
+                    if (isBefore(thisYear, today)) {
+                        setYear(thisYear, getYear(today) + 1);
+                    }
 
-                // Note: Months are 0-indexed in JS Date
-                const birthdayThisYear = new Date(today.getFullYear(), m - 1, d);
+                    return isAfter(thisYear, today) && isBefore(thisYear, next30Days) || isSameDay(thisYear, today);
+                })
+                .sort((a, b) => {
+                    const dateA = new Date(a.birthDate);
+                    dateA.setFullYear(today.getFullYear());
+                    if (dateA < today) dateA.setFullYear(today.getFullYear() + 1);
 
-                let nextBirthday = birthdayThisYear;
-                // If birthday has passed this year, look at next year
-                if (differenceInDays(birthdayThisYear, today) < 0) {
-                    nextBirthday = addYears(birthdayThisYear, 1);
-                }
+                    const dateB = new Date(b.birthDate);
+                    dateB.setFullYear(today.getFullYear());
+                    if (dateB < today) dateB.setFullYear(today.getFullYear() + 1);
 
-                const daysUntil = differenceInDays(nextBirthday, today);
+                    return dateA.getTime() - dateB.getTime();
+                })
+                .slice(0, 5); // Show top 5
 
-                // Stats: Birthdays in current month
-                if (m - 1 === currentMonth) monthCount++;
-
-                // Upcoming in next 30 days
-                if (daysUntil >= 0 && daysUntil <= 30) {
-                    upcoming.push({ ...member, daysUntil, nextBirthday });
-                }
-            });
-
-            // Sort by soonest
-            upcoming.sort((a, b) => (a.daysUntil || 0) - (b.daysUntil || 0));
-
-            setStats({
-                total: members.length,
-                birthdaysMonth: monthCount,
-                upcomingEvents: 0 // Placeholder
-            });
-            setUpcomingBirthdays(upcoming.slice(0, 5));
+            setBirthdays(upcoming);
+            setLoading(false);
         };
 
         fetchData();
-    }, []);
+    }, [user]);
 
-    const statCards = [
-        { title: 'Total Miembros', value: stats.total, icon: Users, color: 'bg-blue-500' },
-        { title: 'Cumpleaños Este Mes', value: stats.birthdaysMonth, icon: Cake, color: 'bg-amber-500' },
-        { title: 'Aniversarios Hogar', value: '0', icon: Trophy, color: 'bg-indigo-500' },
-        { title: 'Eventos Próximos', value: '0', icon: CalendarIcon, color: 'bg-green-500' },
-    ];
+    const getDaysAway = (dateStr: string) => {
+        const today = new Date();
+        const birth = parseISO(dateStr);
+        let target = new Date(birth);
+        target.setFullYear(today.getFullYear());
+        if (isBefore(target, today) && !isSameDay(target, today)) {
+            target.setFullYear(today.getFullYear() + 1);
+        }
+
+        const diff = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        return diff === 0 ? '¡Es Hoy!' : `En ${diff} días`;
+    };
 
     return (
-        <div className="space-y-6">
-            <header>
-                <h1 className="text-2xl font-bold text-white">Hola, {user?.displayName?.split(' ')[0]} 👋</h1>
-                <p className="text-slate-400">Bienvenido al Panel de Honra</p>
-            </header>
+        <div className="space-y-8">
+            <h1 className="text-3xl font-bold text-white">Hola, {user?.displayName?.split(' ')[0]} 👋</h1>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {statCards.map((stat, index) => (
-                    <div key={index} className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center gap-4">
-                        <div className={`${stat.color} p-3 rounded-lg text-white`}>
-                            <stat.icon className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <p className="text-slate-400 text-xs font-medium uppercase">{stat.title}</p>
-                            <h3 className="text-2xl font-bold text-white">{stat.value}</h3>
-                        </div>
-                    </div>
-                ))}
-            </div>
+            {/* HONOR PLANS SECTION */}
+            {honorPlans.length > 0 && (
+                <section>
+                    <h2 className="text-xl font-bold text-amber-500 mb-4 flex items-center gap-2">
+                        <Heart className="w-5 h-5" />
+                        Oportunidades de Honra
+                    </h2>
+                    <div className="grid gap-6 md:grid-cols-2">
+                        {honorPlans.map(plan => (
+                            <div
+                                key={plan.id}
+                                onClick={() => navigate(`/honor/${plan.id}`)}
+                                className="bg-gradient-to-br from-slate-900 to-slate-800 border border-amber-500/30 p-6 rounded-2xl relative overflow-hidden cursor-pointer hover:border-amber-500/60 transition-colors group"
+                            >
+                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <Gift className="w-24 h-24 text-amber-500" />
+                                </div>
+                                <div className="relative z-10">
+                                    <h3 className="text-xl font-bold text-white mb-2 group-hover:text-amber-400 transition-colors">{plan.title}</h3>
+                                    <p className="text-sky-300 font-medium mb-4 flex items-center gap-2">
+                                        <Calendar className="w-4 h-4" />
+                                        {plan.targetDate && format(parseISO(plan.targetDate), 'dd MMMM', { locale: es })}
+                                    </p>
+                                    <p className="text-slate-300 mb-6 text-sm leading-relaxed whitespace-pre-line line-clamp-3">
+                                        {plan.publicMessage}
+                                    </p>
 
-            {/* Upcoming Birthdays Section */}
-            <section className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                    <Cake className="w-5 h-5 text-amber-500" />
-                    Próximos Cumpleaños (30 días)
-                </h2>
-                {upcomingBirthdays.length === 0 ? (
-                    <p className="text-slate-500 text-sm">No hay cumpleaños cercanos.</p>
-                ) : (
-                    <div className="space-y-3">
-                        {upcomingBirthdays.map((member) => (
-                            <div key={member.id} className="flex items-center justify-between bg-slate-950 p-3 rounded-lg border border-slate-800">
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${member.type === 'pastor' ? 'bg-purple-500/20 text-purple-400' :
-                                        member.type === 'lider' ? 'bg-amber-500/20 text-amber-400' :
-                                            'bg-slate-800 text-slate-300'
-                                        }`}>
-                                        {member.fullName[0]}
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-white">{member.fullName}</p>
-                                        <p className="text-xs text-slate-500 capitalize">{member.type}</p>
+                                    <div className="inline-flex items-center gap-2 text-amber-500 font-bold text-sm">
+                                        Ver detalles y Sembrar
+                                        <Heart className="w-4 h-4 fill-current" />
                                     </div>
                                 </div>
-                                <div className="text-right">
-                                    <p className="text-amber-500 font-bold text-sm">
-                                        {member.nextBirthday && format(member.nextBirthday, 'd MMM', { locale: es })}
-                                    </p>
-                                    <p className="text-xs text-slate-500">
-                                        {member.daysUntil === 0 ? '¡Es Hoy!' : `En ${member.daysUntil} días`}
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {/* BIRTHDAYS SECTION */}
+            {/* Same as before... */}
+            <section>
+                <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                    <Gift className="w-5 h-5 text-purple-400" />
+                    Cumpleaños Próximos
+                </h2>
+                {loading ? (
+                    <p className="text-slate-500">Cargando fechas...</p>
+                ) : birthdays.length === 0 ? (
+                    <p className="text-slate-500">No hay cumpleaños cercanos.</p>
+                ) : (
+                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                        {birthdays.map(member => (
+                            <div key={member.id} className="bg-slate-900/50 border border-slate-800 p-4 rounded-xl flex items-center gap-4">
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold ${member.type === 'pastor' ? 'bg-purple-500/20 text-purple-400' :
+                                        member.type === 'lider' ? 'bg-amber-500/20 text-amber-400' :
+                                            'bg-slate-800 text-slate-300'
+                                    }`}>
+                                    {member.fullName[0]}
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-white">{member.fullName}</h3>
+                                    <p className="text-sm text-purple-400 font-medium">{getDaysAway(member.birthDate)}</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        {format(parseISO(member.birthDate), 'dd MMMM', { locale: es })}
                                     </p>
                                 </div>
                             </div>
