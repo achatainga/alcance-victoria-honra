@@ -1,0 +1,48 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isSuperAdmin() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin';
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin');
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Users collection
+    // - Everyone can read basic profiles (needed for member linking)
+    // - Only owner or Admin can write specific fields
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isOwner(userId);
+      allow update: if isAuthenticated() && (isOwner(userId) || isSuperAdmin());
+      allow delete: if isSuperAdmin();
+    }
+
+    // Members collection
+    // - Readers/Congregants can READ (to see birthdays)
+    // - Admins/Editors can CREATE/UPDATE/DELETE
+    // - Users can CREATE/UPDATE their OWN record (via self-registration)
+    match /members/{memberId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated(); // Allow self-registration
+      allow update: if isAuthenticated() && (isAdmin() || request.auth.uid == resource.data.linkedUserId);
+      allow delete: if isAdmin();
+    }
+  }
+}

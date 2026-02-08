@@ -231,6 +231,7 @@ export default function Members() {
                                 <label className="block text-xs uppercase text-slate-500 font-bold mb-1">Fecha de Nacimiento (dd/mm/aaaa)</label>
                                 <input
                                     type="date"
+                                    lang="es"
                                     className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-slate-300"
                                     value={formData.birthDate}
                                     onChange={e => setFormData({ ...formData, birthDate: e.target.value })}
