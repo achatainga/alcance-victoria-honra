@@ -1,13 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import Login from './pages/Login';
+import CompleteProfile from './pages/CompleteProfile';
 import Dashboard from './pages/Dashboard';
+import Members from './pages/Members';
+import Admin from './pages/Admin';
 import MainLayout from './layouts/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
-
-// Placeholder pages for now
-const Members = () => <h1 className="text-2xl font-bold text-white">Gestión de Miembros (En construcción)</h1>;
-const Admin = () => <h1 className="text-2xl font-bold text-white">Panel de Admin (En construcción)</h1>;
 
 export default function App() {
   return (
@@ -15,6 +14,7 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/complete-profile" element={<CompleteProfile />} />
 
           <Route element={<ProtectedRoute />}>
             <Route element={<MainLayout />}>

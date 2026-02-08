@@ -13,6 +13,9 @@ interface UserProfile {
     role: 'super_admin' | 'admin' | 'editor' | 'reader';
     displayName: string | null;
     photoURL: string | null;
+    birthDate?: string;
+    ministryType?: 'pastor' | 'lider' | 'varon' | 'mujer';
+    phoneNumber?: string;
 }
 
 interface AuthContextType {
