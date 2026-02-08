@@ -17,12 +17,10 @@ import { getToken } from 'firebase/messaging';
 export default function App() {
   useEffect(() => {
     const requestPermission = async () => {
-      console.log('Requesting permission...');
       try {
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
-          console.log('Notification permission granted.');
-
+          // Construct the SW URL with env vars
           const swUrl = new URL('/firebase-messaging-sw.js', window.location.origin);
           swUrl.searchParams.append('apiKey', import.meta.env.VITE_FIREBASE_API_KEY);
           swUrl.searchParams.append('authDomain', import.meta.env.VITE_FIREBASE_AUTH_DOMAIN);
@@ -31,24 +29,17 @@ export default function App() {
           swUrl.searchParams.append('messagingSenderId', import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID);
           swUrl.searchParams.append('appId', import.meta.env.VITE_FIREBASE_APP_ID);
 
-          console.log('Registering SW with URL:', swUrl.toString());
           const registration = await navigator.serviceWorker.register(swUrl.toString());
-          console.log('SW Registered:', registration);
 
-          console.log('Getting Token with VAPID:', import.meta.env.VITE_FIREBASE_VAPID_KEY);
           const token = await getToken(messaging, {
             vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
             serviceWorkerRegistration: registration
           });
-          console.log('✅ FCM Token:', token);
-        } else {
-          console.warn('Permission not granted:', permission);
+          console.log('FCM Token:', token);
+          // TODO: Save token to user profile in Firestore
         }
       } catch (error) {
-        console.error('❌ Error requesting notification permission:', error);
-        if (error instanceof Error) {
-          console.error('Error details:', error.message, error.stack);
-        }
+        console.error('Error requesting notification permission:', error);
       }
     };
 
