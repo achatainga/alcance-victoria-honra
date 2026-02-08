@@ -14,7 +14,7 @@ import { format } from 'date-fns';
 interface Member {
     id: string;
     fullName: string;
-    type: 'pastor' | 'lider' | 'varon' | 'mujer';
+    type: 'pastor' | 'lider' | 'varon' | 'mujer' | 'congregante';
     birthDate: string; // YYYY-MM-DD
     status: 'active' | 'graduated' | 'inactive';
     observaciones?: string;
@@ -31,7 +31,7 @@ export default function Members() {
     // Form State
     const [formData, setFormData] = useState<Omit<Member, 'id'>>({
         fullName: '',
-        type: 'varon',
+        type: 'congregante',
         birthDate: '',
         status: 'active',
         observaciones: ''
@@ -93,7 +93,7 @@ export default function Members() {
     const resetForm = () => {
         setFormData({
             fullName: '',
-            type: 'varon',
+            type: 'congregante',
             birthDate: '',
             status: 'active',
             observaciones: ''
@@ -139,13 +139,13 @@ export default function Members() {
                 </div>
                 <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
                     <Filter className="w-4 h-4 text-slate-500" />
-                    {['all', 'pastor', 'lider', 'varon', 'mujer'].map(type => (
+                    {['all', 'pastor', 'lider', 'varon', 'mujer', 'congregante'].map(type => (
                         <button
                             key={type}
                             onClick={() => setTypeFilter(type)}
                             className={`px-3 py-1.5 rounded-lg text-sm capitalize whitespace-nowrap border ${typeFilter === type
-                                    ? 'bg-slate-800 border-amber-500 text-amber-500'
-                                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
+                                ? 'bg-slate-800 border-amber-500 text-amber-500'
+                                : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
                                 }`}
                         >
                             {type === 'all' ? 'Todos' : type}
@@ -162,9 +162,9 @@ export default function Members() {
                     <div key={member.id} className="bg-slate-900/50 border border-slate-800 p-4 rounded-xl flex items-center justify-between group hover:border-slate-700 transition-colors">
                         <div className="flex items-center gap-4">
                             <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold ${member.type === 'pastor' ? 'bg-purple-500/20 text-purple-400' :
-                                    member.type === 'lider' ? 'bg-blue-500/20 text-blue-400' :
-                                        member.type === 'mujer' ? 'bg-pink-500/20 text-pink-400' :
-                                            'bg-slate-700 text-slate-300'
+                                member.type === 'lider' ? 'bg-blue-500/20 text-blue-400' :
+                                    member.type === 'mujer' ? 'bg-pink-500/20 text-pink-400' :
+                                        'bg-slate-700 text-slate-300'
                                 }`}>
                                 {member.fullName[0]}
                             </div>
@@ -211,6 +211,7 @@ export default function Members() {
                                         <option value="mujer">Mujer (Hogar)</option>
                                         <option value="lider">Líder</option>
                                         <option value="pastor">Pastor</option>
+                                        <option value="congregante">Congregante</option>
                                     </select>
                                 </div>
                                 <div>
@@ -227,7 +228,7 @@ export default function Members() {
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-xs uppercase text-slate-500 font-bold mb-1">Fecha de Nacimiento</label>
+                                <label className="block text-xs uppercase text-slate-500 font-bold mb-1">Fecha de Nacimiento (dd/mm/aaaa)</label>
                                 <input
                                     type="date"
                                     className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-slate-300"

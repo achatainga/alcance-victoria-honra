@@ -67,7 +67,7 @@ export default function CompleteProfile() {
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div>
                         <label className="block text-xs uppercase text-slate-500 font-bold mb-1 flex items-center gap-2">
-                            <Calendar className="w-4 h-4" /> Fecha de Nacimiento
+                            <Calendar className="w-4 h-4" /> Fecha de Nacimiento (dd/mm/aaaa)
                         </label>
                         <input
                             type="date"
@@ -91,6 +91,7 @@ export default function CompleteProfile() {
                             <option value="mujer">Mujer (Hogar)</option>
                             <option value="lider">Líder</option>
                             <option value="pastor">Pastor</option>
+                            <option value="congregante">Congregante</option>
                         </select>
                     </div>
 

@@ -14,7 +14,7 @@ interface UserProfile {
     displayName: string | null;
     photoURL: string | null;
     birthDate?: string;
-    ministryType?: 'pastor' | 'lider' | 'varon' | 'mujer';
+    ministryType?: 'pastor' | 'lider' | 'varon' | 'mujer' | 'congregante';
     phoneNumber?: string;
 }
 
