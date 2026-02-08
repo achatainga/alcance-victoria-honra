@@ -6,7 +6,8 @@ import {
     Search,
     Trash2,
     Edit,
-    Filter
+    Filter,
+    Mail
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
@@ -14,9 +15,10 @@ import { format } from 'date-fns';
 interface Member {
     id: string;
     fullName: string;
-    type: 'pastor' | 'lider' | 'varon' | 'mujer' | 'congregante';
+    email?: string; // New email field for Smart Linking
+    type: 'pastor' | 'lider' | 'varon-hogar' | 'varona-hogar' | 'congregante';
     birthDate: string; // YYYY-MM-DD
-    status: 'active' | 'graduated' | 'inactive';
+    status: 'activo' | 'inactivo' | 'graduado' | 'en-proceso' | 'retirado';
     observaciones?: string;
 }
 
@@ -31,9 +33,10 @@ export default function Members() {
     // Form State
     const [formData, setFormData] = useState<Omit<Member, 'id'>>({
         fullName: '',
+        email: '',
         type: 'congregante',
         birthDate: '',
-        status: 'active',
+        status: 'activo',
         observaciones: ''
     });
 
@@ -81,6 +84,7 @@ export default function Members() {
     const handleEdit = (member: Member) => {
         setFormData({
             fullName: member.fullName,
+            email: member.email || '',
             type: member.type,
             birthDate: member.birthDate,
             status: member.status,
@@ -93,12 +97,28 @@ export default function Members() {
     const resetForm = () => {
         setFormData({
             fullName: '',
+            email: '',
             type: 'congregante',
             birthDate: '',
-            status: 'active',
+            status: 'activo',
             observaciones: ''
         });
         setEditingId(null);
+    };
+
+    // Helper to get allowed statuses based on type
+    const getAllowedStatuses = (type: string) => {
+        if (type === 'varon-hogar' || type === 'varona-hogar') {
+            return ['en-proceso', 'graduado', 'retirado'];
+        }
+        return ['activo', 'inactivo'];
+    };
+
+    // Update status when type changes if current status is invalid
+    const handleTypeChange = (newType: any) => {
+        const allowed = getAllowedStatuses(newType);
+        const newStatus = allowed.includes(formData.status) ? formData.status : allowed[0];
+        setFormData({ ...formData, type: newType, status: newStatus as any });
     };
 
     const filteredMembers = members.filter(m => {
@@ -139,7 +159,7 @@ export default function Members() {
                 </div>
                 <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
                     <Filter className="w-4 h-4 text-slate-500" />
-                    {['all', 'pastor', 'lider', 'varon', 'mujer', 'congregante'].map(type => (
+                    {['all', 'pastor', 'lider', 'varon-hogar', 'varona-hogar', 'congregante'].map(type => (
                         <button
                             key={type}
                             onClick={() => setTypeFilter(type)}
@@ -148,7 +168,7 @@ export default function Members() {
                                 : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
                                 }`}
                         >
-                            {type === 'all' ? 'Todos' : type}
+                            {type === 'all' ? 'Todos' : type.replace('-', ' ')}
                         </button>
                     ))}
                 </div>
@@ -163,16 +183,21 @@ export default function Members() {
                         <div className="flex items-center gap-4">
                             <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold ${member.type === 'pastor' ? 'bg-purple-500/20 text-purple-400' :
                                 member.type === 'lider' ? 'bg-blue-500/20 text-blue-400' :
-                                    member.type === 'mujer' ? 'bg-pink-500/20 text-pink-400' :
+                                    member.type === 'varona-hogar' ? 'bg-pink-500/20 text-pink-400' :
                                         'bg-slate-700 text-slate-300'
                                 }`}>
                                 {member.fullName[0]}
                             </div>
                             <div>
                                 <h3 className="font-bold text-white">{member.fullName}</h3>
-                                <div className="flex items-center gap-2 text-xs text-slate-400">
-                                    <span className="capitalize bg-slate-800 px-2 py-0.5 rounded text-slate-300 border border-slate-700">{member.type}</span>
+                                <div className="flex items-center gap-2 text-xs text-slate-400 flex-wrap">
+                                    <span className="capitalize bg-slate-800 px-2 py-0.5 rounded text-slate-300 border border-slate-700">{member.type.replace('-', ' ')}</span>
+                                    <span className={`capitalize px-2 py-0.5 rounded border ${member.status === 'activo' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                                            member.status === 'graduado' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                                                'bg-slate-800 text-slate-500 border-slate-700'
+                                        }`}>{member.status}</span>
                                     {member.birthDate && <span>🎂 {format(new Date(member.birthDate), 'dd/MM/yyyy')}</span>}
+                                    {member.email && <span className="flex items-center gap-1 text-slate-500"><Mail className="w-3 h-3" /> {member.email}</span>}
                                 </div>
                             </div>
                         </div>
@@ -187,7 +212,7 @@ export default function Members() {
             {/* Modal Overlay */}
             {showModal && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl">
+                    <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
                         <h2 className="text-xl font-bold text-white mb-4">{editingId ? 'Editar' : 'Nuevo'} Miembro</h2>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
@@ -199,16 +224,29 @@ export default function Members() {
                                     onChange={e => setFormData({ ...formData, fullName: e.target.value })}
                                 />
                             </div>
+
+                            {/* Email for Smart Linking */}
+                            <div>
+                                <label className="block text-xs uppercase text-slate-500 font-bold mb-1">Email (Opcional - Para vincular cuenta)</label>
+                                <input
+                                    type="email"
+                                    className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-white"
+                                    value={formData.email}
+                                    onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                    placeholder="ejemplo@gmail.com"
+                                />
+                            </div>
+
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs uppercase text-slate-500 font-bold mb-1">Tipo</label>
                                     <select
                                         className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-white"
                                         value={formData.type}
-                                        onChange={e => setFormData({ ...formData, type: e.target.value as any })}
+                                        onChange={e => handleTypeChange(e.target.value)}
                                     >
-                                        <option value="varon">Varón (Hogar)</option>
-                                        <option value="mujer">Mujer (Hogar)</option>
+                                        <option value="varon-hogar">Varón Hogar</option>
+                                        <option value="varona-hogar">Varona Hogar</option>
                                         <option value="lider">Líder</option>
                                         <option value="pastor">Pastor</option>
                                         <option value="congregante">Congregante</option>
@@ -221,9 +259,9 @@ export default function Members() {
                                         value={formData.status}
                                         onChange={e => setFormData({ ...formData, status: e.target.value as any })}
                                     >
-                                        <option value="active">Activo</option>
-                                        <option value="graduated">Graduado</option>
-                                        <option value="inactive">Inactivo</option>
+                                        {getAllowedStatuses(formData.type).map(status => (
+                                            <option key={status} value={status}>{status.replace('-', ' ')}</option>
+                                        ))}
                                     </select>
                                 </div>
                             </div>

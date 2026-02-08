@@ -88,8 +88,8 @@ export default function CompleteProfile() {
                             value={formData.ministryType}
                             onChange={e => setFormData({ ...formData, ministryType: e.target.value })}
                         >
-                            <option value="varon">Varón (Hogar)</option>
-                            <option value="mujer">Mujer (Hogar)</option>
+                            <option value="varon-hogar">Varón (Hogar)</option>
+                            <option value="varona-hogar">Varona (Hogar)</option>
                             <option value="lider">Líder</option>
                             <option value="pastor">Pastor</option>
                             <option value="congregante">Congregante</option>

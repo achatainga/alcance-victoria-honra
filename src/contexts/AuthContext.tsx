@@ -5,7 +5,7 @@ import {
     onAuthStateChanged
 } from 'firebase/auth';
 import { auth, googleProvider, db } from '../lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
 
 interface UserProfile {
     uid: string;
@@ -14,7 +14,7 @@ interface UserProfile {
     displayName: string | null;
     photoURL: string | null;
     birthDate?: string;
-    ministryType?: 'pastor' | 'lider' | 'varon' | 'mujer' | 'congregante';
+    ministryType?: 'pastor' | 'lider' | 'varon-hogar' | 'varona-hogar' | 'congregante';
     phoneNumber?: string;
 }
 
@@ -42,13 +42,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setUser(userSnap.data() as UserProfile);
                 } else {
                     // Create new user (default role: reader)
-                    // EXCEPTION: First user might need to be admin manually, but for now default to reader
+
+                    // SMART LINKING LOGIC: Check if member exists with this email
+                    const membersRef = collection(db, 'members');
+                    const q = query(membersRef, where('email', '==', firebaseUser.email));
+                    const querySnapshot = await getDocs(q);
+
+                    let linkedMemberData = {};
+
+                    if (!querySnapshot.empty) {
+                        const existingMemberDoc = querySnapshot.docs[0];
+                        const memberData = existingMemberDoc.data();
+
+                        // Copy data from Member to User Profile
+                        linkedMemberData = {
+                            birthDate: memberData.birthDate,
+                            ministryType: memberData.type,
+                            // Optionally phone, etc.
+                        };
+
+                        // Link Member to User
+                        await updateDoc(doc(db, 'members', existingMemberDoc.id), {
+                            linkedUserId: firebaseUser.uid
+                        });
+                    }
+
                     const newUser: UserProfile = {
                         uid: firebaseUser.uid,
                         email: firebaseUser.email,
                         role: 'reader', // Default role
                         displayName: firebaseUser.displayName,
-                        photoURL: firebaseUser.photoURL
+                        photoURL: firebaseUser.photoURL,
+                        ...linkedMemberData
                     };
                     await setDoc(userRef, newUser);
                     setUser(newUser);
