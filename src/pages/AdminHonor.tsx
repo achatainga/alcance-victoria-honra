@@ -104,6 +104,16 @@ export default function HonorAdmin() {
                 createdAt: new Date()
             });
 
+            // Trigger Push Notification (Fire and Forget)
+            fetch('/api/send-push', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: '👑 Nueva Oportunidad de Honra',
+                    body: `Se ha creado el plan: ${formData.title}. ¡Entra para ver los detalles!`,
+                })
+            }).catch(err => console.error('Error triggering push:', err));
+
             toast.success('Plan creado exitosamente');
             setShowModal(false);
             setFormData({

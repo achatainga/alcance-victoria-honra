@@ -4,7 +4,8 @@ import {
     signOut,
     onAuthStateChanged
 } from 'firebase/auth';
-import { auth, googleProvider, db } from '../lib/firebase';
+import { getToken } from 'firebase/messaging';
+import { auth, googleProvider, db, messaging } from '../lib/firebase';
 import { doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
 
 interface UserProfile {
@@ -16,6 +17,7 @@ interface UserProfile {
     birthDate?: string;
     ministryType?: 'pastor' | 'lider' | 'varon-hogar' | 'varona-hogar' | 'congregante';
     phoneNumber?: string;
+    fcmToken?: string;
 }
 
 interface AuthContextType {
@@ -38,8 +40,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 const userRef = doc(db, 'users', firebaseUser.uid);
                 const userSnap = await getDoc(userRef);
 
+                let userData: UserProfile;
+
                 if (userSnap.exists()) {
-                    setUser(userSnap.data() as UserProfile);
+                    userData = userSnap.data() as UserProfile;
                 } else {
                     // Create new user (default role: reader)
 
@@ -76,8 +80,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         ...linkedMemberData
                     };
                     await setDoc(userRef, newUser);
-                    setUser(newUser);
+                    userData = newUser;
                 }
+
+                // --- SAVE FCM TOKEN ---
+                try {
+                    const permission = await Notification.requestPermission();
+                    if (permission === 'granted') {
+                        // We need to register SW here or rely on App.tsx registration? 
+                        // It's cleaner to just get the token if registration exists, but let's be robust.
+                        // Ideally App.tsx handles the initial registration. 
+                        // But we can try getting the token.
+
+                        // NOTE: We are importing messaging from ../lib/firebase
+                        // We need to import getToken from firebase/messaging at the top
+
+                        // Construct the SW URL with env vars (redundant but safe)
+                        const swUrl = new URL('/firebase-messaging-sw.js', window.location.origin);
+                        ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId'].forEach(key => {
+                            swUrl.searchParams.append(key, import.meta.env[`VITE_FIREBASE_${key.replace(/[A-Z]/g, letter => `_${letter}`).toUpperCase()}`]);
+                        });
+
+                        const registration = await navigator.serviceWorker.getRegistration();
+
+                        if (registration) {
+                            const token = await getToken(messaging, {
+                                vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+                                serviceWorkerRegistration: registration
+                            });
+
+                            if (token) {
+                                if (userData.fcmToken !== token) {
+                                    await updateDoc(userRef, { fcmToken: token });
+                                    userData.fcmToken = token;
+                                }
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error saving FCM token:", error);
+                }
+
+                setUser(userData);
             } else {
                 setUser(null);
             }
