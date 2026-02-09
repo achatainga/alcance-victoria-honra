@@ -158,19 +158,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
             const result = await signInWithPopup(auth, googleProvider);
             
-            // Try to get birthday from Google
-            const credential = result.user;
-            const accessToken = await credential.getIdToken();
-            
-            // Note: We need the OAuth access token, not ID token
-            // Firebase doesn't expose it directly, so we use getIdToken as fallback
-            // Better approach: use result from GoogleAuthProvider.credentialFromResult
-            const googleCredential = await import('firebase/auth').then(m => m.GoogleAuthProvider.credentialFromResult(result));
+            // Try to get birthday from Google People API
+            const { GoogleAuthProvider } = await import('firebase/auth');
+            const googleCredential = GoogleAuthProvider.credentialFromResult(result);
             
             if (googleCredential?.accessToken) {
                 const birthDate = await fetchGoogleBirthday(googleCredential.accessToken);
                 if (birthDate) {
-                    const userRef = doc(db, 'users', credential.uid);
+                    const userRef = doc(db, 'users', result.user.uid);
                     await updateDoc(userRef, { birthDate });
                 }
             }
