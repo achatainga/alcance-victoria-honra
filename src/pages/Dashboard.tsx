@@ -141,10 +141,12 @@ export default function Dashboard() {
                                 </div>
                                 <div className="relative z-10">
                                     <h3 className="text-xl font-bold text-white mb-2 group-hover:text-amber-400 transition-colors">{plan.title}</h3>
-                                    <p className="text-sky-300 font-medium mb-4 flex items-center gap-2">
-                                        <Calendar className="w-4 h-4" />
-                                        {plan.targetDate && format(parseISO(plan.targetDate), 'dd MMMM', { locale: es })}
-                                    </p>
+                                    {plan.targetDate && (
+                                        <p className="text-sky-300 font-medium mb-4 flex items-center gap-2">
+                                            <Calendar className="w-4 h-4" />
+                                            {format(parseISO(plan.targetDate), 'dd MMMM', { locale: es })}
+                                        </p>
+                                    )}
                                     <p className="text-slate-300 mb-6 text-sm leading-relaxed whitespace-pre-line line-clamp-3">
                                         {plan.publicMessage}
                                     </p>
@@ -184,9 +186,11 @@ export default function Dashboard() {
                                 <div>
                                     <h3 className="font-bold text-white">{member.fullName}</h3>
                                     <p className="text-sm text-purple-400 font-medium">{getDaysAway(member.birthDate)}</p>
-                                    <p className="text-xs text-slate-500 mt-0.5">
-                                        {format(parseISO(member.birthDate), 'dd MMMM', { locale: es })}
-                                    </p>
+                                    {member.birthDate && (
+                                        <p className="text-xs text-slate-500 mt-0.5">
+                                            {format(parseISO(member.birthDate), 'dd MMMM', { locale: es })}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                         ))}

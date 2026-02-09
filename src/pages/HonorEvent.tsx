@@ -121,7 +121,7 @@ export default function HonorEvent() {
                             <h2 className="text-xl font-bold text-white mb-1">{plan.title}</h2>
                             <p className="text-amber-400 font-medium flex items-center justify-center gap-2">
                                 <Calendar className="w-4 h-4" />
-                                {plan.targetDate && format(parseISO(plan.targetDate), 'EEEE d MMMM, yyyy', { locale: es })}
+                                {plan.targetDate ? format(parseISO(plan.targetDate), 'EEEE d MMMM, yyyy', { locale: es }) : 'Fecha por confirmar'}
                             </p>
                         </div>
                     </div>
