@@ -3,13 +3,14 @@ import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
 import { doc, updateDoc, setDoc } from 'firebase/firestore';
 import { toast } from 'react-toastify';
-import { User, Calendar, Phone, Briefcase } from 'lucide-react';
+import { User, Calendar, Phone } from 'lucide-react';
 
 export default function CompleteProfile() {
     const { user } = useAuth();
     const [loading, setLoading] = useState(false);
 
     const [formData, setFormData] = useState({
+        birthDate: user?.birthDate || '',
         phoneNumber: ''
     });
 
@@ -22,6 +23,7 @@ export default function CompleteProfile() {
             // 1. Update User Profile
             const userRef = doc(db, 'users', user.uid);
             await updateDoc(userRef, {
+                birthDate: formData.birthDate,
                 phoneNumber: formData.phoneNumber
             });
 
@@ -32,6 +34,7 @@ export default function CompleteProfile() {
             await setDoc(memberRef, {
                 fullName: user.displayName || 'Usuario Sin Nombre',
                 email: user.email,
+                birthDate: formData.birthDate,
                 phoneNumber: formData.phoneNumber,
                 status: 'activo',
                 linkedUserId: user.uid
@@ -60,6 +63,21 @@ export default function CompleteProfile() {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
+                    {!user?.birthDate && (
+                        <div>
+                            <label className="block text-xs uppercase text-slate-500 font-bold mb-1 flex items-center gap-2">
+                                <Calendar className="w-4 h-4" /> Fecha de Nacimiento
+                            </label>
+                            <input
+                                type="date"
+                                required
+                                className="w-full bg-slate-800 border-slate-700 rounded-xl px-4 py-3 text-white focus:border-amber-500 outline-none transition-colors"
+                                value={formData.birthDate}
+                                onChange={e => setFormData({ ...formData, birthDate: e.target.value })}
+                            />
+                        </div>
+                    )}
+
                     <div>
                         <label className="block text-xs uppercase text-slate-500 font-bold mb-1 flex items-center gap-2">
                             <Phone className="w-4 h-4" /> Teléfono

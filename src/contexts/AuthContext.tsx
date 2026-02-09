@@ -8,10 +8,28 @@ import { getToken } from 'firebase/messaging';
 import { auth, googleProvider, db, messaging } from '../lib/firebase';
 import { doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
 
-// Force account selection on every login
+// Force account selection on every login + request birthday scope
 googleProvider.setCustomParameters({
     prompt: 'select_account'
 });
+googleProvider.addScope('https://www.googleapis.com/auth/user.birthday.read');
+
+// Fetch birthday from Google People API
+async function fetchGoogleBirthday(accessToken: string): Promise<string | null> {
+    try {
+        const response = await fetch('https://people.googleapis.com/v1/people/me?personFields=birthdays', {
+            headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        const data = await response.json();
+        const birthday = data.birthdays?.find((b: any) => b.metadata?.primary)?.date;
+        if (birthday?.year && birthday?.month && birthday?.day) {
+            return `${birthday.year}-${String(birthday.month).padStart(2, '0')}-${String(birthday.day).padStart(2, '0')}`;
+        }
+    } catch (error) {
+        console.warn('Could not fetch birthday from Google:', error);
+    }
+    return null;
+}
 
 interface UserProfile {
     uid: string;
@@ -138,7 +156,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const signInWithGoogle = async () => {
         try {
-            await signInWithPopup(auth, googleProvider);
+            const result = await signInWithPopup(auth, googleProvider);
+            
+            // Try to get birthday from Google
+            const credential = result.user;
+            const accessToken = await credential.getIdToken();
+            
+            // Note: We need the OAuth access token, not ID token
+            // Firebase doesn't expose it directly, so we use getIdToken as fallback
+            // Better approach: use result from GoogleAuthProvider.credentialFromResult
+            const googleCredential = await import('firebase/auth').then(m => m.GoogleAuthProvider.credentialFromResult(result));
+            
+            if (googleCredential?.accessToken) {
+                const birthDate = await fetchGoogleBirthday(googleCredential.accessToken);
+                if (birthDate) {
+                    const userRef = doc(db, 'users', credential.uid);
+                    await updateDoc(userRef, { birthDate });
+                }
+            }
         } catch (error) {
             console.error("Error signing in with Google", error);
             throw error;

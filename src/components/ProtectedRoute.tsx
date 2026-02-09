@@ -17,7 +17,7 @@ export default function ProtectedRoute() {
     }
 
     // Check if profile is complete
-    const isProfileComplete = user.phoneNumber;
+    const isProfileComplete = user.phoneNumber && user.birthDate;
 
     if (!isProfileComplete && window.location.pathname !== '/complete-profile') {
         return <Navigate to="/complete-profile" replace />;
