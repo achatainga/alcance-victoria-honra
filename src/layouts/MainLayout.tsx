@@ -83,18 +83,18 @@ export default function MainLayout() {
             {/* Main Content */}
             <div className="flex-1 min-w-0 flex flex-col">
                 {/* Mobile Header */}
-                <header className="md:hidden bg-slate-900/90 backdrop-blur border-b border-slate-800 p-4 sticky top-0 z-20 flex justify-between items-center">
+                <header className="md:hidden bg-slate-900 border-b border-slate-800 p-4 sticky top-0 z-50 flex justify-between items-center">
                     <div className="flex items-center gap-2">
                         <h1 className="font-bold text-white">Alcance Honra</h1>
                     </div>
-                    <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-slate-300">
+                    <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-slate-300 relative z-50">
                         {isMobileMenuOpen ? <X /> : <Menu />}
                     </button>
                 </header>
 
                 {/* Mobile Menu Overlay */}
                 {isMobileMenuOpen && (
-                    <div className="fixed inset-0 z-10 bg-slate-950 pt-20 px-6 md:hidden">
+                    <div className="fixed inset-0 z-40 bg-slate-950 pt-20 px-6 md:hidden">
                         <nav className="space-y-2">
                             {navItems.map((item) => (
                                 <NavLink
@@ -104,7 +104,7 @@ export default function MainLayout() {
                                     className={({ isActive }) =>
                                         `flex items-center gap-3 px-4 py-4 rounded-xl text-lg ${isActive
                                             ? 'bg-amber-500 text-slate-900 font-bold'
-                                            : 'text-slate-400 border border-slate-800'
+                                            : 'text-slate-300 bg-slate-900 border border-slate-800'
                                         }`
                                     }
                                 >
@@ -114,7 +114,7 @@ export default function MainLayout() {
                             ))}
                             <button
                                 onClick={handleLogout}
-                                className="w-full mt-8 flex items-center gap-2 justify-center py-4 bg-red-500/10 text-red-400 rounded-xl"
+                                className="w-full mt-8 flex items-center gap-2 justify-center py-4 bg-red-500/10 text-red-400 rounded-xl border border-red-500/20"
                             >
                                 <LogOut className="w-5 h-5" />
                                 Cerrar Sesión
