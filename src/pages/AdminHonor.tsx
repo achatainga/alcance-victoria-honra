@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { db, storage } from '../lib/firebase';
+import { db } from '../lib/firebase';
 import { collection, addDoc, query, onSnapshot, orderBy, deleteDoc, doc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+
 import { Plus, Trash2, Calendar, Send, CreditCard } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
@@ -21,13 +21,13 @@ interface HonorPlan {
     description: string;
     publicMessage: string;
     financialTarget?: number;
-    contributionLink?: string; // Optional legacy link
+    contributionLink?: string;
     pagoMovil?: {
         phone: string;
         cedula: string;
         bank: string;
     };
-    qrUrl?: string; // URL of the uploaded QR code
+    qrUrl?: string;
     status: 'planning' | 'active' | 'completed';
     createdAt: any;
 }
@@ -46,7 +46,6 @@ export default function HonorAdmin() {
         description: '',
         publicMessage: '',
         financialTarget: '',
-        // Pago Movil Fields
         pmPhone: '',
         pmCedula: '',
         pmBank: '',
@@ -78,11 +77,13 @@ export default function HonorAdmin() {
         setUploading(true);
         try {
             let qrUrl = '';
-
             if (qrFile) {
-                const storageRef = ref(storage, `honor_qrs/${Date.now()}_${qrFile.name}`);
-                const snapshot = await uploadBytes(storageRef, qrFile);
-                qrUrl = await getDownloadURL(snapshot.ref);
+                qrUrl = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target?.result as string);
+                    reader.onerror = (e) => reject(e);
+                    reader.readAsDataURL(qrFile);
+                });
             }
 
             const pagoMovilData = (formData.pmPhone || formData.pmCedula || formData.pmBank) ? {
@@ -104,7 +105,6 @@ export default function HonorAdmin() {
                 createdAt: new Date()
             });
 
-            // Trigger Push Notification (Fire and Forget)
             fetch('/api/send-push', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -152,7 +152,7 @@ export default function HonorAdmin() {
 
         const dateStr = plan.targetDate ? format(new Date(plan.targetDate), 'dd MMMM', { locale: es }) : 'Fecha por definir';
 
-        let message = `*HONRA ESPECIAL: ${plan.title}* %F0%9F%91%91\n\n` +
+        let message = `*HONRA ESPECIAL: ${plan.title}* 👑\n\n` +
             `Familia, estaremos honrando a: *${honoreeNames}* el día ${dateStr}.\n\n` +
             `${plan.publicMessage}\n\n`;
 
@@ -163,23 +163,18 @@ export default function HonorAdmin() {
         if (plan.pagoMovil || plan.qrUrl) {
             message += `*DATOS PARA APORTAR:*\n`;
             if (plan.pagoMovil) {
-                if (plan.pagoMovil.bank) message += `%F0%9F%8F%A6 ${plan.pagoMovil.bank}\n`;
-                if (plan.pagoMovil.phone) message += `%F0%9F%93%B1 ${plan.pagoMovil.phone}\n`;
-                if (plan.pagoMovil.cedula) message += `%F0%9F%86%94 ${plan.pagoMovil.cedula}\n`;
+                if (plan.pagoMovil.bank) message += `🏦 ${plan.pagoMovil.bank}\n`;
+                if (plan.pagoMovil.phone) message += `📱 ${plan.pagoMovil.phone}\n`;
+                if (plan.pagoMovil.cedula) message += `🆔 ${plan.pagoMovil.cedula}\n`;
             }
             if (plan.qrUrl) {
                 message += `(Ver QR en la App)\n`;
             }
         }
 
-        message += `\n%C2%A1No faltes!`;
-
-        return `https://wa.me/?text=${message}`; // Removed double encoding, using pre-encoded emojis or assuming browser handles it if I used literal emojis.
-        // Wait, the user said they see ???. This often happens when the text is NOT encoded correctly for the URL scheme or the platform receiving it.
-        // Best approach: Use standard JS emojis and encodeURIComponent(message) FULLY.
-
+        message += `\n¡No faltes!`;
+        return `https://wa.me/?text=${encodeURIComponent(message)}`;
     };
-
 
     return (
         <div className="space-y-6">
@@ -356,7 +351,7 @@ export default function HonorAdmin() {
 
                             <div className="flex gap-3 mt-6">
                                 <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-3 text-slate-400 hover:bg-slate-800 rounded-xl">Cancelar</button>
-                                <button type="submit" disabled={uploading} className="flex-1 py-3 bg-amber-500 text-slate-900 font-bold rounded-xl hover:bg-amber-400 disabled:opacity-50">
+                                <button type="submit" disabled={uploading} className="flex-1 py-3 bg-amber-500 text-slate_900 font-bold rounded-xl hover:bg-amber-400 disabled:opacity-50">
                                     {uploading ? 'Guardando...' : 'Crear Plan'}
                                 </button>
                             </div>

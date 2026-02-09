@@ -51,7 +51,7 @@ export default function Dashboard() {
             // 2. Fetch Active Honor Plans
             const qPlans = query(
                 collection(db, 'honor_plans'),
-                where('status', '==', 'active'),
+                where('status', 'in', ['active', 'planning']),
                 orderBy('targetDate', 'asc')
             );
             const plansSnap = await getDocs(qPlans);
@@ -175,8 +175,8 @@ export default function Dashboard() {
                         {birthdays.map(member => (
                             <div key={member.id} className="bg-slate-900/50 border border-slate-800 p-4 rounded-xl flex items-center gap-4">
                                 <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold ${member.type === 'pastor' ? 'bg-purple-500/20 text-purple-400' :
-                                        member.type === 'lider' ? 'bg-amber-500/20 text-amber-400' :
-                                            'bg-slate-800 text-slate-300'
+                                    member.type === 'lider' ? 'bg-amber-500/20 text-amber-400' :
+                                        'bg-slate-800 text-slate-300'
                                     }`}>
                                     {member.fullName[0]}
                                 </div>
