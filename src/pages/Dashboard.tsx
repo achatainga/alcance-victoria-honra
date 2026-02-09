@@ -58,11 +58,15 @@ export default function Dashboard() {
             const allPlans = plansSnap.docs.map(d => ({ id: d.id, ...d.data() } as HonorPlan));
 
             // FILTER: Show active/planning, hide if user is honoree, and validate targetDate
-            const visiblePlans = allPlans.filter(plan =>
-                (plan.status === 'active' || plan.status === 'planning') &&
-                !plan.honoreeIds.includes(currentMemberId) &&
-                plan.targetDate && !isNaN(Date.parse(plan.targetDate))
-            );
+            const visiblePlans = allPlans.filter(plan => {
+                if (plan.status !== 'active' && plan.status !== 'planning') return false;
+                if (plan.honoreeIds.includes(currentMemberId)) return false;
+                if (!plan.targetDate) return false;
+                
+                const date = new Date(plan.targetDate);
+                const year = date.getFullYear();
+                return !isNaN(date.getTime()) && year >= 1900 && year <= 2100;
+            });
             setHonorPlans(visiblePlans);
 
             // 3. Fetch Birthdays
