@@ -94,13 +94,26 @@ export default function HonorEvent() {
 
     const ikPublicKey = import.meta.env.VITE_IMAGEKIT_PUBLIC_KEY;
     const ikUrlEndpoint = import.meta.env.VITE_IMAGEKIT_URL_ENDPOINT;
-    const ikAuthEndpoint = `${window.location.origin}/api/imagekit-auth`;
+    
+    const authenticator = async () => {
+        try {
+            const response = await fetch(`${window.location.origin}/api/imagekit-auth`);
+            if (!response.ok) {
+                throw new Error(`Request failed with status ${response.status}`);
+            }
+            const data = await response.json();
+            const { signature, expire, token } = data;
+            return { signature, expire, token };
+        } catch (error) {
+            throw new Error(`Authentication request failed: ${error}`);
+        }
+    };
 
     return (
         <IKContext
             publicKey={ikPublicKey}
             urlEndpoint={ikUrlEndpoint}
-            authenticationEndpoint={ikAuthEndpoint}
+            authenticator={authenticator}
         >
             <div className="space-y-6 pb-20">
                 {/* Header */}
