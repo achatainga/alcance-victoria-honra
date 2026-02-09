@@ -57,10 +57,11 @@ export default function Dashboard() {
             const plansSnap = await getDocs(qPlans);
             const allPlans = plansSnap.docs.map(d => ({ id: d.id, ...d.data() } as HonorPlan));
 
-            // FILTER: Show active/planning and hide if user is honoree
+            // FILTER: Show active/planning, hide if user is honoree, and validate targetDate
             const visiblePlans = allPlans.filter(plan =>
                 (plan.status === 'active' || plan.status === 'planning') &&
-                !plan.honoreeIds.includes(currentMemberId)
+                !plan.honoreeIds.includes(currentMemberId) &&
+                plan.targetDate && !isNaN(Date.parse(plan.targetDate))
             );
             setHonorPlans(visiblePlans);
 
