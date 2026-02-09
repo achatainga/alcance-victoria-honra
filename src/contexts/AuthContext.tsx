@@ -88,9 +88,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                             // Optionally phone, etc.
                         };
 
-                        // Link Member to User
+                        // Link Member to User + Sync email
                         await updateDoc(doc(db, 'members', existingMemberDoc.id), {
-                            linkedUserId: firebaseUser.uid
+                            linkedUserId: firebaseUser.uid,
+                            email: firebaseUser.email
                         });
                     }
 
