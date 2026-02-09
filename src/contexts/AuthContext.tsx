@@ -8,6 +8,11 @@ import { getToken } from 'firebase/messaging';
 import { auth, googleProvider, db, messaging } from '../lib/firebase';
 import { doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
 
+// Force account selection on every login
+googleProvider.setCustomParameters({
+    prompt: 'select_account'
+});
+
 interface UserProfile {
     uid: string;
     email: string | null;

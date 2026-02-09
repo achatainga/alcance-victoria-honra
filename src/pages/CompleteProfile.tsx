@@ -10,8 +10,6 @@ export default function CompleteProfile() {
     const [loading, setLoading] = useState(false);
 
     const [formData, setFormData] = useState({
-        birthDate: '',
-        ministryType: 'varon',
         phoneNumber: ''
     });
 
@@ -24,8 +22,6 @@ export default function CompleteProfile() {
             // 1. Update User Profile
             const userRef = doc(db, 'users', user.uid);
             await updateDoc(userRef, {
-                birthDate: formData.birthDate,
-                ministryType: formData.ministryType,
                 phoneNumber: formData.phoneNumber
             });
 
@@ -35,10 +31,9 @@ export default function CompleteProfile() {
             const memberRef = doc(db, 'members', user.uid);
             await setDoc(memberRef, {
                 fullName: user.displayName || 'Usuario Sin Nombre',
-                type: formData.ministryType,
-                birthDate: formData.birthDate,
-                status: 'active',
-                observaciones: `Auto-registrado via App. Tel: ${formData.phoneNumber}`,
+                email: user.email,
+                phoneNumber: formData.phoneNumber,
+                status: 'activo',
                 linkedUserId: user.uid
             }, { merge: true });
 
@@ -67,41 +62,11 @@ export default function CompleteProfile() {
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div>
                         <label className="block text-xs uppercase text-slate-500 font-bold mb-1 flex items-center gap-2">
-                            <Calendar className="w-4 h-4" /> Fecha de Nacimiento (dd/mm/aaaa)
-                        </label>
-                        <input
-                            type="date"
-                            lang="es"
-                            required
-                            className="w-full bg-slate-800 border-slate-700 rounded-xl px-4 py-3 text-white focus:border-amber-500 outline-none transition-colors"
-                            value={formData.birthDate}
-                            onChange={e => setFormData({ ...formData, birthDate: e.target.value })}
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-xs uppercase text-slate-500 font-bold mb-1 flex items-center gap-2">
-                            <Briefcase className="w-4 h-4" /> Tipo de Ministerio
-                        </label>
-                        <select
-                            className="w-full bg-slate-800 border-slate-700 rounded-xl px-4 py-3 text-white focus:border-amber-500 outline-none transition-colors"
-                            value={formData.ministryType}
-                            onChange={e => setFormData({ ...formData, ministryType: e.target.value })}
-                        >
-                            <option value="varon-hogar">Varón (Hogar)</option>
-                            <option value="varona-hogar">Varona (Hogar)</option>
-                            <option value="lider">Líder</option>
-                            <option value="pastor">Pastor</option>
-                            <option value="congregante">Congregante</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs uppercase text-slate-500 font-bold mb-1 flex items-center gap-2">
-                            <Phone className="w-4 h-4" /> Teléfono (Opcional)
+                            <Phone className="w-4 h-4" /> Teléfono
                         </label>
                         <input
                             type="tel"
+                            required
                             className="w-full bg-slate-800 border-slate-700 rounded-xl px-4 py-3 text-white focus:border-amber-500 outline-none transition-colors"
                             placeholder="+58 ..."
                             value={formData.phoneNumber}
