@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
-import { collection, addDoc, query, onSnapshot, orderBy, deleteDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, query, onSnapshot, orderBy, deleteDoc, doc, setDoc } from 'firebase/firestore';
 
-import { Plus, Trash2, Calendar, Send, CreditCard } from 'lucide-react';
+import { Plus, Trash2, Calendar, Send, CreditCard, Edit2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -37,6 +37,7 @@ export default function HonorAdmin() {
     const [members, setMembers] = useState<Member[]>([]);
     const [showModal, setShowModal] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -84,6 +85,10 @@ export default function HonorAdmin() {
                     reader.onerror = (e) => reject(e);
                     reader.readAsDataURL(qrFile);
                 });
+            } else if (editingId) {
+                // If editing and no new file, keep existing one
+                const currentPlan = plans.find(p => p.id === editingId);
+                qrUrl = currentPlan?.qrUrl || '';
             }
 
             const pagoMovilData = (formData.pmPhone || formData.pmCedula || formData.pmBank) ? {
@@ -92,7 +97,7 @@ export default function HonorAdmin() {
                 bank: formData.pmBank
             } : undefined;
 
-            await addDoc(collection(db, 'honor_plans'), {
+            const planData = {
                 title: formData.title,
                 targetDate: formData.targetDate,
                 honoreeIds: formData.honoreeIds,
@@ -101,21 +106,45 @@ export default function HonorAdmin() {
                 financialTarget: Number(formData.financialTarget) || 0,
                 pagoMovil: pagoMovilData,
                 qrUrl: qrUrl,
-                status: 'active',
-                createdAt: new Date()
-            });
+                status: 'active' as const,
+                updatedAt: new Date()
+            };
+
+            if (editingId) {
+                await setDoc(doc(db, 'honor_plans', editingId), {
+                    ...planData,
+                    createdAt: plans.find(p => p.id === editingId)?.createdAt || new Date()
+                });
+                toast.success('Plan actualizado exitosamente');
+            } else {
+                await addDoc(collection(db, 'honor_plans'), {
+                    ...planData,
+                    createdAt: new Date()
+                });
+                toast.success('Plan creado exitosamente');
+            }
 
             fetch('/api/send-push', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    title: '👑 Nueva Oportunidad de Honra',
-                    body: `Se ha creado el plan: ${formData.title}. ¡Entra para ver los detalles!`,
+                    title: editingId ? '🔄 Plan de Honra Actualizado' : '👑 Nueva Oportunidad de Honra',
+                    body: editingId ? `El plan "${formData.title}" ha sido modificado. ¡Revisa los cambios!` : `Se ha creado el plan: ${formData.title}. ¡Entra para ver los detalles!`,
                 })
             }).catch(err => console.error('Error triggering push:', err));
 
-            toast.success('Plan creado exitosamente');
+            fetch('/api/send-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    subject: editingId ? `Honra Actualizada: ${formData.title}` : `Nueva Honra: ${formData.title}`,
+                    message: `Hola,\n\nSe ha ${editingId ? 'actualizado' : 'creado'} un plan de honra: ${formData.title}.\n\n${formData.publicMessage}\n\nEntra en la App para ver todos los detalles.`,
+                    recipientRoles: ['reader', 'editor', 'admin', 'super_admin']
+                })
+            }).catch(err => console.error('Error triggering email:', err));
+
             setShowModal(false);
+            setEditingId(null);
             setFormData({
                 title: '', targetDate: '', honoreeIds: [], description: '',
                 publicMessage: '', financialTarget: '', pmPhone: '', pmCedula: '', pmBank: ''
@@ -123,10 +152,26 @@ export default function HonorAdmin() {
             setQrFile(null);
         } catch (error) {
             console.error(error);
-            toast.error('Error al crear plan');
+            toast.error(editingId ? 'Error al actualizar plan' : 'Error al crear plan');
         } finally {
             setUploading(false);
         }
+    };
+
+    const handleEdit = (plan: HonorPlan) => {
+        setEditingId(plan.id);
+        setFormData({
+            title: plan.title,
+            targetDate: plan.targetDate,
+            honoreeIds: plan.honoreeIds,
+            description: plan.description,
+            publicMessage: plan.publicMessage,
+            financialTarget: plan.financialTarget?.toString() || '',
+            pmPhone: plan.pagoMovil?.phone || '',
+            pmCedula: plan.pagoMovil?.cedula || '',
+            pmBank: plan.pagoMovil?.bank || '',
+        });
+        setShowModal(true);
     };
 
     const handleDelete = async (id: string) => {
@@ -203,9 +248,14 @@ export default function HonorAdmin() {
                                     {plan.targetDate && format(new Date(plan.targetDate), 'dd MMM yyyy', { locale: es })}
                                 </p>
                             </div>
-                            <button onClick={() => handleDelete(plan.id)} className="text-slate-600 hover:text-red-400">
-                                <Trash2 className="w-4 h-4" />
-                            </button>
+                            <div className="flex gap-2">
+                                <button onClick={() => handleEdit(plan)} className="text-slate-400 hover:text-amber-500 transition-colors">
+                                    <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button onClick={() => handleDelete(plan.id)} className="text-slate-600 hover:text-red-400">
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
                         </div>
 
                         <div className="space-y-2">
@@ -237,7 +287,7 @@ export default function HonorAdmin() {
             {showModal && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
-                        <h2 className="text-xl font-bold text-white mb-4">Nuevo Plan de Honra</h2>
+                        <h2 className="text-xl font-bold text-white mb-4">{editingId ? 'Editar Plan de Honra' : 'Nuevo Plan de Honra'}</h2>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid md:grid-cols-2 gap-4">
                                 <div>
@@ -350,9 +400,9 @@ export default function HonorAdmin() {
                             </div>
 
                             <div className="flex gap-3 mt-6">
-                                <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-3 text-slate-400 hover:bg-slate-800 rounded-xl">Cancelar</button>
-                                <button type="submit" disabled={uploading} className="flex-1 py-3 bg-amber-500 text-slate_900 font-bold rounded-xl hover:bg-amber-400 disabled:opacity-50">
-                                    {uploading ? 'Guardando...' : 'Crear Plan'}
+                                <button type="button" onClick={() => { setShowModal(false); setEditingId(null); }} className="flex-1 py-3 text-slate-400 hover:bg-slate-800 rounded-xl">Cancelar</button>
+                                <button type="submit" disabled={uploading} className="flex-1 py-3 bg-amber-500 text-slate-900 font-bold rounded-xl hover:bg-amber-400 disabled:opacity-50">
+                                    {uploading ? 'Guardando...' : (editingId ? 'Actualizar Plan' : 'Crear Plan')}
                                 </button>
                             </div>
                         </form>

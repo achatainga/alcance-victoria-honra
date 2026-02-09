@@ -25,6 +25,7 @@ interface HonorPlan {
     financialTarget?: number;
     contributionLink?: string;
     qrUrl?: string;
+    status: 'planning' | 'active' | 'completed';
 }
 
 export default function Dashboard() {
@@ -48,17 +49,17 @@ export default function Dashboard() {
                 }
             }
 
-            // 2. Fetch Active Honor Plans
+            // 2. Fetch Honor Plans (filter in memory to avoid missing index errors)
             const qPlans = query(
                 collection(db, 'honor_plans'),
-                where('status', 'in', ['active', 'planning']),
                 orderBy('targetDate', 'asc')
             );
             const plansSnap = await getDocs(qPlans);
             const allPlans = plansSnap.docs.map(d => ({ id: d.id, ...d.data() } as HonorPlan));
 
-            // FILTER: Hide plan if user is one of the honorees!
+            // FILTER: Show active/planning and hide if user is honoree
             const visiblePlans = allPlans.filter(plan =>
+                (plan.status === 'active' || plan.status === 'planning') &&
                 !plan.honoreeIds.includes(currentMemberId)
             );
             setHonorPlans(visiblePlans);

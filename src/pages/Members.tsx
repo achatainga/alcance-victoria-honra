@@ -7,7 +7,8 @@ import {
     Trash2,
     Edit,
     Filter,
-    Mail
+    Mail,
+    Phone
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
@@ -17,6 +18,7 @@ interface Member {
     id: string;
     fullName: string;
     email?: string; // New email field for Smart Linking
+    phoneNumber?: string; // Nuevo campo de teléfono
     type: 'pastor' | 'lider' | 'varon-hogar' | 'varona-hogar' | 'congregante';
     birthDate: string; // YYYY-MM-DD
     status: 'activo' | 'inactivo' | 'graduado' | 'en-proceso' | 'retirado';
@@ -38,6 +40,7 @@ export default function Members() {
     const [formData, setFormData] = useState<Omit<Member, 'id'>>({
         fullName: '',
         email: '',
+        phoneNumber: '',
         type: 'congregante',
         birthDate: '',
         status: 'activo',
@@ -89,6 +92,7 @@ export default function Members() {
         setFormData({
             fullName: member.fullName,
             email: member.email || '',
+            phoneNumber: member.phoneNumber || '',
             type: member.type,
             birthDate: member.birthDate,
             status: member.status,
@@ -102,6 +106,7 @@ export default function Members() {
         setFormData({
             fullName: '',
             email: '',
+            phoneNumber: '',
             type: 'congregante',
             birthDate: '',
             status: 'activo',
@@ -204,6 +209,7 @@ export default function Members() {
                                         }`}>{member.status}</span>
                                     {member.birthDate && <span>🎂 {format(new Date(member.birthDate), 'dd/MM/yyyy')}</span>}
                                     {member.email && <span className="flex items-center gap-1 text-slate-500"><Mail className="w-3 h-3" /> {member.email}</span>}
+                                    {member.phoneNumber && <span className="flex items-center gap-1 text-slate-500"><Phone className="w-3 h-3" /> {member.phoneNumber}</span>}
                                 </div>
                             </div>
                         </div>
@@ -245,6 +251,18 @@ export default function Members() {
                                     onChange={e => setFormData({ ...formData, email: e.target.value })}
                                     placeholder="ejemplo@gmail.com"
                                     required={!['varon-hogar', 'varona-hogar'].includes(formData.type)}
+                                />
+                            </div>
+
+                            {/* Teléfono */}
+                            <div>
+                                <label className="block text-xs uppercase text-slate-500 font-bold mb-1">Teléfono</label>
+                                <input
+                                    type="tel"
+                                    className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-white"
+                                    value={formData.phoneNumber}
+                                    onChange={e => setFormData({ ...formData, phoneNumber: e.target.value })}
+                                    placeholder="+58 412..."
                                 />
                             </div>
 
