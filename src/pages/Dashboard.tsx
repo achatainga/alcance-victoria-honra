@@ -90,17 +90,6 @@ export default function Dashboard() {
         fetchData();
     }, [user]);
 
-    const getDaysAway = (dateStr: string) => {
-        const today = new Date();
-        const birth = parseISO(dateStr);
-        const day = birth.getDate();
-        const todayDay = today.getDate();
-        
-        if (day === todayDay) return '¡Es Hoy!';
-        if (day < todayDay) return 'Ya pasó';
-        return `En ${day - todayDay} días`;
-    };
-
     return (
         <div className="space-y-8">
             <h1 className="text-3xl font-bold text-white">Hola, {user?.displayName?.split(' ')[0]} 👋</h1>
