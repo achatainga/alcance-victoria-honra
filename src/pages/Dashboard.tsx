@@ -69,27 +69,21 @@ export default function Dashboard() {
             });
             setHonorPlans(visiblePlans);
 
-            // 3. Fetch Birthdays - Show all birthdays in current month
+            // 3. Fetch Birthdays - Group by month, show all months
             const qMembers = query(collection(db, 'members'));
             const membersSnap = await getDocs(qMembers);
 
-            const today = new Date();
-            const currentMonth = getMonth(today);
-
-            const upcoming = membersSnap.docs
+            const allBirthdays = membersSnap.docs
                 .map(doc => ({ id: doc.id, ...doc.data() } as Birthday))
-                .filter(m => {
-                    if (!m.birthDate) return false;
-                    const birth = parseISO(m.birthDate);
-                    return getMonth(birth) === currentMonth;
-                })
+                .filter(m => m.birthDate)
                 .sort((a, b) => {
-                    const dayA = parseISO(a.birthDate).getDate();
-                    const dayB = parseISO(b.birthDate).getDate();
-                    return dayA - dayB;
+                    const monthA = getMonth(parseISO(a.birthDate));
+                    const monthB = getMonth(parseISO(b.birthDate));
+                    if (monthA !== monthB) return monthA - monthB;
+                    return parseISO(a.birthDate).getDate() - parseISO(b.birthDate).getDate();
                 });
 
-            setBirthdays(upcoming);
+            setBirthdays(allBirthdays);
             setLoading(false);
         };
 
@@ -156,7 +150,7 @@ export default function Dashboard() {
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-bold text-white flex items-center gap-2">
                         <Gift className="w-5 h-5 text-purple-400" />
-                        Cumpleaños de {format(new Date(), 'MMMM', { locale: es })}
+                        Cumpleaños del Año
                     </h2>
                     {(user?.role === 'super_admin' || user?.role === 'admin') && (
                         <button
@@ -164,46 +158,74 @@ export default function Dashboard() {
                             className="bg-purple-600 hover:bg-purple-500 text-white text-sm font-bold py-2 px-4 rounded-xl flex items-center gap-2 transition-colors"
                         >
                             <Plus className="w-4 h-4" />
-                            Crear Evento del Mes
+                            Crear Evento
                         </button>
                     )}
                 </div>
                 {loading ? (
                     <p className="text-slate-500">Cargando fechas...</p>
                 ) : birthdays.length === 0 ? (
-                    <p className="text-slate-500">No hay cumpleaños cercanos.</p>
+                    <p className="text-slate-500">No hay cumpleaños registrados.</p>
                 ) : (
-                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                        {birthdays.map(member => (
-                            <div key={member.id} className="bg-slate-900/50 border border-slate-800 p-4 rounded-xl">
-                                <div className="flex items-center gap-4 mb-3">
-                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold ${member.type === 'pastor' ? 'bg-purple-500/20 text-purple-400' :
-                                        member.type === 'lider' ? 'bg-amber-500/20 text-amber-400' :
-                                            'bg-slate-800 text-slate-300'
-                                        }`}>
-                                        {member.fullName[0]}
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="font-bold text-white">{member.fullName}</h3>
-                                        <p className="text-sm text-purple-400 font-medium">{getDaysAway(member.birthDate)}</p>
-                                        {member.birthDate && (
-                                            <p className="text-xs text-slate-500 mt-0.5">
-                                                {format(parseISO(member.birthDate), 'dd MMMM', { locale: es })}
-                                            </p>
+                    <div className="space-y-6">
+                        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(monthIndex => {
+                            const monthBirthdays = birthdays.filter(b => getMonth(parseISO(b.birthDate)) === monthIndex);
+                            if (monthBirthdays.length === 0) return null;
+
+                            const monthName = format(new Date(2024, monthIndex), 'MMMM', { locale: es });
+                            const today = new Date();
+                            const isPastMonth = monthIndex < getMonth(today);
+
+                            return (
+                                <div key={monthIndex}>
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h3 className="text-lg font-bold text-purple-400 capitalize flex items-center gap-2">
+                                            {monthName}
+                                            {isPastMonth && <span className="text-xs text-slate-500 font-normal">(Pendiente)</span>}
+                                        </h3>
+                                        {(user?.role === 'super_admin' || user?.role === 'admin') && (
+                                            <button
+                                                onClick={() => navigate('/admin/honor')}
+                                                className="bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 text-xs font-bold py-1 px-3 rounded-lg flex items-center gap-1 transition-colors"
+                                            >
+                                                <Plus className="w-3 h-3" />
+                                                Evento {monthName}
+                                            </button>
                                         )}
                                     </div>
+                                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                                        {monthBirthdays.map(member => (
+                                            <div key={member.id} className="bg-slate-900/50 border border-slate-800 p-4 rounded-xl">
+                                                <div className="flex items-center gap-4 mb-3">
+                                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold ${
+                                                        member.type === 'pastor' ? 'bg-purple-500/20 text-purple-400' :
+                                                        member.type === 'lider' ? 'bg-amber-500/20 text-amber-400' :
+                                                        'bg-slate-800 text-slate-300'
+                                                    }`}>
+                                                        {member.fullName[0]}
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <h3 className="font-bold text-white">{member.fullName}</h3>
+                                                        <p className="text-xs text-slate-500 mt-0.5">
+                                                            {format(parseISO(member.birthDate), 'dd MMMM', { locale: es })}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                {(user?.role === 'super_admin' || user?.role === 'admin') && (
+                                                    <button
+                                                        onClick={() => navigate('/admin/honor')}
+                                                        className="w-full bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 text-xs font-bold py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                                                    >
+                                                        <Plus className="w-3 h-3" />
+                                                        Crear Evento de Honra
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                                {(user?.role === 'super_admin' || user?.role === 'admin') && (
-                                    <button
-                                        onClick={() => navigate('/admin/honor')}
-                                        className="w-full bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 text-xs font-bold py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
-                                    >
-                                        <Plus className="w-3 h-3" />
-                                        Crear Evento de Honra
-                                    </button>
-                                )}
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </section>
