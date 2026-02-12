@@ -6,6 +6,7 @@ import { format, parseISO, getMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Calendar, Gift, Heart, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 interface Birthday {
     id: string;
@@ -34,6 +35,7 @@ export default function Dashboard() {
     const [birthdays, setBirthdays] = useState<Birthday[]>([]);
     const [honorPlans, setHonorPlans] = useState<HonorPlan[]>([]);
     const [loading, setLoading] = useState(true);
+    const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -90,6 +92,26 @@ export default function Dashboard() {
         fetchData();
     }, [user]);
 
+    const toggleMonth = (monthIndex: number) => {
+        setSelectedMonths(prev => 
+            prev.includes(monthIndex) 
+                ? prev.filter(m => m !== monthIndex)
+                : [...prev, monthIndex]
+        );
+    };
+
+    const createEventForSelectedMonths = () => {
+        if (selectedMonths.length === 0) {
+            toast.error('Selecciona al menos un mes');
+            return;
+        }
+        const selectedIds = birthdays
+            .filter(b => selectedMonths.includes(getMonth(parseISO(b.birthDate))))
+            .map(b => b.id)
+            .join(',');
+        navigate(`/honor-admin?preselect=${selectedIds}`);
+    };
+
     return (
         <div className="space-y-8">
             <h1 className="text-3xl font-bold text-white">Hola, {user?.displayName?.split(' ')[0]} 👋</h1>
@@ -141,18 +163,29 @@ export default function Dashboard() {
                         <Gift className="w-5 h-5 text-purple-400" />
                         Cumpleaños del Año
                     </h2>
-                    {(user?.role === 'super_admin' || user?.role === 'admin') && (
-                        <button
-                            onClick={() => {
-                                const allIds = birthdays.map(b => b.id).join(',');
-                                navigate(`/honor-admin?preselect=${allIds}`);
-                            }}
-                            className="bg-purple-600 hover:bg-purple-500 text-white text-sm font-bold py-2 px-4 rounded-xl flex items-center gap-2 transition-colors"
-                        >
-                            <Plus className="w-4 h-4" />
-                            Crear Evento
-                        </button>
-                    )}
+                    <div className="flex gap-2">
+                        {selectedMonths.length > 0 && (
+                            <button
+                                onClick={createEventForSelectedMonths}
+                                className="bg-green-600 hover:bg-green-500 text-white text-sm font-bold py-2 px-4 rounded-xl flex items-center gap-2 transition-colors"
+                            >
+                                <Plus className="w-4 h-4" />
+                                Crear Evento ({selectedMonths.length} {selectedMonths.length === 1 ? 'mes' : 'meses'})
+                            </button>
+                        )}
+                        {(user?.role === 'super_admin' || user?.role === 'admin') && (
+                            <button
+                                onClick={() => {
+                                    const allIds = birthdays.map(b => b.id).join(',');
+                                    navigate(`/honor-admin?preselect=${allIds}`);
+                                }}
+                                className="bg-purple-600 hover:bg-purple-500 text-white text-sm font-bold py-2 px-4 rounded-xl flex items-center gap-2 transition-colors"
+                            >
+                                <Plus className="w-4 h-4" />
+                                Crear Evento
+                            </button>
+                        )}
+                    </div>
                 </div>
                 {loading ? (
                     <p className="text-slate-500">Cargando fechas...</p>
@@ -171,10 +204,20 @@ export default function Dashboard() {
                             return (
                                 <div key={monthIndex}>
                                     <div className="flex items-center justify-between mb-3">
-                                        <h3 className="text-lg font-bold text-purple-400 capitalize flex items-center gap-2">
-                                            {monthName}
-                                            {isPastMonth && <span className="text-xs text-slate-500 font-normal">(Pendiente)</span>}
-                                        </h3>
+                                        <div className="flex items-center gap-3">
+                                            {(user?.role === 'super_admin' || user?.role === 'admin') && (
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedMonths.includes(monthIndex)}
+                                                    onChange={() => toggleMonth(monthIndex)}
+                                                    className="w-5 h-5 rounded border-purple-500 bg-slate-800 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                                                />
+                                            )}
+                                            <h3 className="text-lg font-bold text-purple-400 capitalize flex items-center gap-2">
+                                                {monthName}
+                                                {isPastMonth && <span className="text-xs text-slate-500 font-normal">(Pendiente)</span>}
+                                            </h3>
+                                        </div>
                                         {(user?.role === 'super_admin' || user?.role === 'admin') && (
                                             <button
                                                 onClick={() => {
