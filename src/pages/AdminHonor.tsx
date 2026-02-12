@@ -6,6 +6,7 @@ import { Plus, Trash2, Calendar, Send, CreditCard, Edit2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useSearchParams } from 'react-router-dom';
 
 interface Member {
     id: string;
@@ -33,6 +34,7 @@ interface HonorPlan {
 }
 
 export default function HonorAdmin() {
+    const [searchParams] = useSearchParams();
     const [plans, setPlans] = useState<HonorPlan[]>([]);
     const [members, setMembers] = useState<Member[]>([]);
     const [showModal, setShowModal] = useState(false);
@@ -64,8 +66,16 @@ export default function HonorAdmin() {
             setMembers(snap.docs.map(d => ({ id: d.id, fullName: d.data().fullName, type: d.data().type } as Member)));
         });
 
+        // Preselect members from URL params
+        const preselect = searchParams.get('preselect');
+        if (preselect) {
+            const ids = preselect.split(',');
+            setFormData(prev => ({ ...prev, honoreeIds: ids }));
+            setShowModal(true);
+        }
+
         return () => { unsubPlans(); unsubMembers(); };
-    }, []);
+    }, [searchParams]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
