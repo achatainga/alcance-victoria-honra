@@ -143,7 +143,7 @@ export default function Dashboard() {
                     </h2>
                     {(user?.role === 'super_admin' || user?.role === 'admin') && (
                         <button
-                            onClick={() => navigate('/admin/honor')}
+                            onClick={() => navigate('/honor-admin')}
                             className="bg-purple-600 hover:bg-purple-500 text-white text-sm font-bold py-2 px-4 rounded-xl flex items-center gap-2 transition-colors"
                         >
                             <Plus className="w-4 h-4" />
@@ -174,7 +174,7 @@ export default function Dashboard() {
                                         </h3>
                                         {(user?.role === 'super_admin' || user?.role === 'admin') && (
                                             <button
-                                                onClick={() => navigate('/admin/honor')}
+                                                onClick={() => navigate('/honor-admin')}
                                                 className="bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 text-xs font-bold py-1 px-3 rounded-lg flex items-center gap-1 transition-colors"
                                             >
                                                 <Plus className="w-3 h-3" />
@@ -202,7 +202,7 @@ export default function Dashboard() {
                                                 </div>
                                                 {(user?.role === 'super_admin' || user?.role === 'admin') && (
                                                     <button
-                                                        onClick={() => navigate('/admin/honor')}
+                                                        onClick={() => navigate('/honor-admin')}
                                                         className="w-full bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 text-xs font-bold py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
                                                     >
                                                         <Plus className="w-3 h-3" />
