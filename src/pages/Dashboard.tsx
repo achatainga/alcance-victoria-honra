@@ -2,9 +2,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { db } from '../lib/firebase';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
-import { format, parseISO, getYear, setYear, getMonth, startOfMonth, endOfMonth } from 'date-fns';
+import { format, parseISO, getMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar, Gift, Heart } from 'lucide-react';
+import { Calendar, Gift, Heart, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface Birthday {
@@ -152,12 +152,22 @@ export default function Dashboard() {
             )}
 
             {/* BIRTHDAYS SECTION */}
-            {/* Same as before... */}
             <section>
-                <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                    <Gift className="w-5 h-5 text-purple-400" />
-                    Cumpleaños Próximos
-                </h2>
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                        <Gift className="w-5 h-5 text-purple-400" />
+                        Cumpleaños de {format(new Date(), 'MMMM', { locale: es })}
+                    </h2>
+                    {(user?.role === 'super_admin' || user?.role === 'admin') && (
+                        <button
+                            onClick={() => navigate('/admin/honor')}
+                            className="bg-purple-600 hover:bg-purple-500 text-white text-sm font-bold py-2 px-4 rounded-xl flex items-center gap-2 transition-colors"
+                        >
+                            <Plus className="w-4 h-4" />
+                            Crear Evento del Mes
+                        </button>
+                    )}
+                </div>
                 {loading ? (
                     <p className="text-slate-500">Cargando fechas...</p>
                 ) : birthdays.length === 0 ? (
@@ -165,22 +175,33 @@ export default function Dashboard() {
                 ) : (
                     <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                         {birthdays.map(member => (
-                            <div key={member.id} className="bg-slate-900/50 border border-slate-800 p-4 rounded-xl flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold ${member.type === 'pastor' ? 'bg-purple-500/20 text-purple-400' :
-                                    member.type === 'lider' ? 'bg-amber-500/20 text-amber-400' :
-                                        'bg-slate-800 text-slate-300'
-                                    }`}>
-                                    {member.fullName[0]}
+                            <div key={member.id} className="bg-slate-900/50 border border-slate-800 p-4 rounded-xl">
+                                <div className="flex items-center gap-4 mb-3">
+                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold ${member.type === 'pastor' ? 'bg-purple-500/20 text-purple-400' :
+                                        member.type === 'lider' ? 'bg-amber-500/20 text-amber-400' :
+                                            'bg-slate-800 text-slate-300'
+                                        }`}>
+                                        {member.fullName[0]}
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="font-bold text-white">{member.fullName}</h3>
+                                        <p className="text-sm text-purple-400 font-medium">{getDaysAway(member.birthDate)}</p>
+                                        {member.birthDate && (
+                                            <p className="text-xs text-slate-500 mt-0.5">
+                                                {format(parseISO(member.birthDate), 'dd MMMM', { locale: es })}
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="font-bold text-white">{member.fullName}</h3>
-                                    <p className="text-sm text-purple-400 font-medium">{getDaysAway(member.birthDate)}</p>
-                                    {member.birthDate && (
-                                        <p className="text-xs text-slate-500 mt-0.5">
-                                            {format(parseISO(member.birthDate), 'dd MMMM', { locale: es })}
-                                        </p>
-                                    )}
-                                </div>
+                                {(user?.role === 'super_admin' || user?.role === 'admin') && (
+                                    <button
+                                        onClick={() => navigate('/admin/honor')}
+                                        className="w-full bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 text-xs font-bold py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                                    >
+                                        <Plus className="w-3 h-3" />
+                                        Crear Evento de Honra
+                                    </button>
+                                )}
                             </div>
                         ))}
                     </div>
