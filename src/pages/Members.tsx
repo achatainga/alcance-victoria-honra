@@ -8,7 +8,8 @@ import {
     Edit,
     Filter,
     Mail,
-    Phone
+    Phone,
+    Link2
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
@@ -34,6 +35,7 @@ export default function Members() {
     const [searchTerm, setSearchTerm] = useState('');
     const [typeFilter, setTypeFilter] = useState<string>('all');
     const [showModal, setShowModal] = useState(false);
+    const [showSyncModal, setShowSyncModal] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
 
     // Form State
@@ -136,6 +138,69 @@ export default function Members() {
         return matchesSearch && matchesType;
     });
 
+    // Detect potential duplicates
+    const detectDuplicates = () => {
+        const groups: Member[][] = [];
+        const processed = new Set<string>();
+
+        members.forEach(m1 => {
+            if (processed.has(m1.id)) return;
+            const duplicates = [m1];
+            
+            members.forEach(m2 => {
+                if (m1.id === m2.id || processed.has(m2.id)) return;
+                
+                // Same email
+                if (m1.email && m2.email && m1.email === m2.email) {
+                    duplicates.push(m2);
+                    processed.add(m2.id);
+                }
+                // Similar name (simple check)
+                else if (m1.fullName.toLowerCase() === m2.fullName.toLowerCase()) {
+                    duplicates.push(m2);
+                    processed.add(m2.id);
+                }
+            });
+
+            if (duplicates.length > 1) {
+                groups.push(duplicates);
+                processed.add(m1.id);
+            }
+        });
+
+        return groups;
+    };
+
+    const mergeMember = async (keepId: string, removeId: string) => {
+        if (!confirm('¿Fusionar estas cuentas? Se mantendrá la primera y se eliminará la segunda.')) return;
+        
+        try {
+            const keep = members.find(m => m.id === keepId)!;
+            const remove = members.find(m => m.id === removeId)!;
+
+            // Merge data (keep non-empty values)
+            const merged = {
+                fullName: keep.fullName || remove.fullName,
+                email: keep.email || remove.email,
+                phoneNumber: keep.phoneNumber || remove.phoneNumber,
+                type: keep.type,
+                birthDate: keep.birthDate || remove.birthDate,
+                status: keep.status,
+                observaciones: [keep.observaciones, remove.observaciones].filter(Boolean).join(' | ')
+            };
+
+            await updateDoc(doc(db, 'members', keepId), merged);
+            await deleteDoc(doc(db, 'members', removeId));
+            
+            toast.success('Cuentas fusionadas exitosamente');
+        } catch (error) {
+            console.error(error);
+            toast.error('Error al fusionar cuentas');
+        }
+    };
+
+    const duplicateGroups = detectDuplicates();
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -146,13 +211,22 @@ export default function Members() {
                     </span>
                 </h1>
                 {isAdmin && (
-                    <button
-                        onClick={() => { resetForm(); setShowModal(true); }}
-                        className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold py-2 px-4 rounded-xl flex items-center gap-2 transition-colors"
-                    >
-                        <UserPlus className="w-5 h-5" />
-                        Nuevo Miembro
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setShowSyncModal(true)}
+                            className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-xl flex items-center gap-2 transition-colors"
+                        >
+                            <Link2 className="w-5 h-5" />
+                            Account Sync
+                        </button>
+                        <button
+                            onClick={() => { resetForm(); setShowModal(true); }}
+                            className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold py-2 px-4 rounded-xl flex items-center gap-2 transition-colors"
+                        >
+                            <UserPlus className="w-5 h-5" />
+                            Nuevo Miembro
+                        </button>
+                    </div>
                 )}
             </div>
 
@@ -239,24 +313,20 @@ export default function Members() {
                                 />
                             </div>
 
-                            {/* Email for Smart Linking */}
                             <div>
-                                <label className="block text-xs uppercase text-slate-500 font-bold mb-1">
-                                    Email {['varon-hogar', 'varona-hogar'].includes(formData.type) ? '(Opcional)' : '(Requerido para vincular)'}
-                                </label>
+                                <label className="block text-xs uppercase text-slate-500 font-bold mb-1">Email (Opcional)</label>
                                 <input
                                     type="email"
                                     className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-white"
                                     value={formData.email}
                                     onChange={e => setFormData({ ...formData, email: e.target.value })}
                                     placeholder="ejemplo@gmail.com"
-                                    required={!['varon-hogar', 'varona-hogar'].includes(formData.type)}
                                 />
                             </div>
 
                             {/* Teléfono */}
                             <div>
-                                <label className="block text-xs uppercase text-slate-500 font-bold mb-1">Teléfono</label>
+                                <label className="block text-xs uppercase text-slate-500 font-bold mb-1">Teléfono (Opcional)</label>
                                 <input
                                     type="tel"
                                     className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-white"
@@ -295,9 +365,10 @@ export default function Members() {
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-xs uppercase text-slate-500 font-bold mb-1">Fecha de Nacimiento (dd/mm/aaaa)</label>
+                                <label className="block text-xs uppercase text-slate-500 font-bold mb-1">Fecha de Nacimiento *</label>
                                 <input
                                     type="date"
+                                    required
                                     lang="es"
                                     className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-slate-300"
                                     value={formData.birthDate}
@@ -310,6 +381,57 @@ export default function Members() {
                                 <button type="submit" className="flex-1 py-3 bg-amber-500 text-slate-900 font-bold rounded-xl hover:bg-amber-400">Guardar</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Account Sync Modal */}
+            {showSyncModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                <Link2 className="w-5 h-5 text-blue-500" />
+                                Account Sync - Duplicados Detectados
+                            </h2>
+                            <button onClick={() => setShowSyncModal(false)} className="text-slate-400 hover:text-white">×</button>
+                        </div>
+
+                        {duplicateGroups.length === 0 ? (
+                            <div className="text-center py-10">
+                                <p className="text-slate-400">No se encontraron duplicados</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {duplicateGroups.map((group, idx) => (
+                                    <div key={idx} className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
+                                        <p className="text-xs text-slate-500 mb-3 uppercase font-bold">Grupo {idx + 1}</p>
+                                        <div className="space-y-2">
+                                            {group.map((member, mIdx) => (
+                                                <div key={member.id} className="flex items-center justify-between bg-slate-900 p-3 rounded-lg">
+                                                    <div>
+                                                        <p className="text-white font-bold">{member.fullName}</p>
+                                                        <p className="text-xs text-slate-400">
+                                                            {member.email && `📧 ${member.email}`}
+                                                            {member.phoneNumber && ` 📱 ${member.phoneNumber}`}
+                                                            {member.birthDate && ` 🎂 ${format(new Date(member.birthDate), 'dd/MM/yyyy')}`}
+                                                        </p>
+                                                    </div>
+                                                    {mIdx > 0 && (
+                                                        <button
+                                                            onClick={() => mergeMember(group[0].id, member.id)}
+                                                            className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1 rounded-lg"
+                                                        >
+                                                            Fusionar con primera
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
