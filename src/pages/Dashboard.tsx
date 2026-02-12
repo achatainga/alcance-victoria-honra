@@ -2,7 +2,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { db } from '../lib/firebase';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
-import { format, addDays, isSameDay, parseISO, getYear, setYear, isAfter, isBefore } from 'date-fns';
+import { format, parseISO, getYear, setYear, getMonth, startOfMonth, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Calendar, Gift, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -69,39 +69,25 @@ export default function Dashboard() {
             });
             setHonorPlans(visiblePlans);
 
-            // 3. Fetch Birthdays
-            const qMembers = query(collection(db, 'members'), where('status', '==', 'activo'));
+            // 3. Fetch Birthdays - Show all birthdays in current month
+            const qMembers = query(collection(db, 'members'));
             const membersSnap = await getDocs(qMembers);
 
             const today = new Date();
-            const next30Days = addDays(today, 30);
+            const currentMonth = getMonth(today);
 
             const upcoming = membersSnap.docs
                 .map(doc => ({ id: doc.id, ...doc.data() } as Birthday))
                 .filter(m => {
                     if (!m.birthDate) return false;
                     const birth = parseISO(m.birthDate);
-                    const thisYear = new Date(birth);
-                    setYear(thisYear, getYear(today));
-
-                    if (isBefore(thisYear, today)) {
-                        setYear(thisYear, getYear(today) + 1);
-                    }
-
-                    return isAfter(thisYear, today) && isBefore(thisYear, next30Days) || isSameDay(thisYear, today);
+                    return getMonth(birth) === currentMonth;
                 })
                 .sort((a, b) => {
-                    const dateA = new Date(a.birthDate);
-                    dateA.setFullYear(today.getFullYear());
-                    if (dateA < today) dateA.setFullYear(today.getFullYear() + 1);
-
-                    const dateB = new Date(b.birthDate);
-                    dateB.setFullYear(today.getFullYear());
-                    if (dateB < today) dateB.setFullYear(today.getFullYear() + 1);
-
-                    return dateA.getTime() - dateB.getTime();
-                })
-                .slice(0, 5); // Show top 5
+                    const dayA = parseISO(a.birthDate).getDate();
+                    const dayB = parseISO(b.birthDate).getDate();
+                    return dayA - dayB;
+                });
 
             setBirthdays(upcoming);
             setLoading(false);
@@ -113,14 +99,12 @@ export default function Dashboard() {
     const getDaysAway = (dateStr: string) => {
         const today = new Date();
         const birth = parseISO(dateStr);
-        let target = new Date(birth);
-        target.setFullYear(today.getFullYear());
-        if (isBefore(target, today) && !isSameDay(target, today)) {
-            target.setFullYear(today.getFullYear() + 1);
-        }
-
-        const diff = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        return diff === 0 ? '¡Es Hoy!' : `En ${diff} días`;
+        const day = birth.getDate();
+        const todayDay = today.getDate();
+        
+        if (day === todayDay) return '¡Es Hoy!';
+        if (day < todayDay) return 'Ya pasó';
+        return `En ${day - todayDay} días`;
     };
 
     return (
