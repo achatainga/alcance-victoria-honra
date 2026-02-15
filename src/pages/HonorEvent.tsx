@@ -257,10 +257,17 @@ export default function HonorEvent() {
                     
                     if (!plan.honoreeIds || plan.honoreeIds.length === 0) {
                         console.log('DEBUG - No honoreeIds');
-                        return null;
+                        return (
+                            <div className="bg-gradient-to-br from-pink-500/10 to-purple-500/10 border border-pink-500/20 rounded-2xl p-6">
+                                <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
+                                    🎂 Cumpleaños del Mes
+                                </h3>
+                                <p className="text-slate-400 text-sm">No hay homenajeados asignados a este evento</p>
+                            </div>
+                        );
                     }
                     
-                    const honorees = members.filter(m => plan.honoreeIds.includes(m.id));
+                    const honorees = members.filter(m => plan.honoreeIds!.includes(m.id));
                     console.log('DEBUG - honorees:', honorees.map(h => h.fullName));
                     
                     if (honorees.length === 0) {
@@ -289,7 +296,16 @@ export default function HonorEvent() {
                     
                     console.log('DEBUG - birthdays:', birthdays.map(b => b.fullName));
                     
-                    if (birthdays.length === 0) return null;
+                    if (birthdays.length === 0) {
+                        return (
+                            <div className="bg-gradient-to-br from-pink-500/10 to-purple-500/10 border border-pink-500/20 rounded-2xl p-6">
+                                <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
+                                    🎂 Cumpleaños del Mes
+                                </h3>
+                                <p className="text-slate-400 text-sm">No hay cumpleaños este mes</p>
+                            </div>
+                        );
+                    }
                     
                     return (
                         <div className="bg-gradient-to-br from-pink-500/10 to-purple-500/10 border border-pink-500/20 rounded-2xl p-6">
