@@ -347,7 +347,7 @@ export default function Members() {
                                     <select
                                         className="w-full bg-slate-800 border-slate-700 rounded-lg px-4 py-2 text-white"
                                         value={formData.type}
-                                        onChange={e => handleTypeChange(e.target.value)}
+                                        onChange={e => handleTypeChange(e.target.value as Member['type'])}
                                     >
                                         <option value="varon-hogar">Varón Hogar</option>
                                         <option value="varona-hogar">Varona Hogar</option>
