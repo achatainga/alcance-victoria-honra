@@ -253,7 +253,7 @@ export default function Members() {
                                 : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
                                 }`}
                         >
-                            {type === 'all' ? 'Todos' : type.replace('-', ' ')}
+                            {type === 'all' ? 'Todos' : type?.replace('-', ' ') || type}
                         </button>
                     ))}
                 </div>
@@ -276,11 +276,11 @@ export default function Members() {
                             <div>
                                 <h3 className="font-bold text-white">{member.fullName}</h3>
                                 <div className="flex items-center gap-2 text-xs text-slate-400 flex-wrap">
-                                    <span className="capitalize bg-slate-800 px-2 py-0.5 rounded text-slate-300 border border-slate-700">{member.type.replace('-', ' ')}</span>
+                                    <span className="capitalize bg-slate-800 px-2 py-0.5 rounded text-slate-300 border border-slate-700">{member.type?.replace('-', ' ') || 'sin tipo'}</span>
                                     <span className={`capitalize px-2 py-0.5 rounded border ${member.status === 'activo' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
                                         member.status === 'graduado' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
                                             'bg-slate-800 text-slate-500 border-slate-700'
-                                        }`}>{member.status}</span>
+                                        }`}>{member.status || 'sin status'}</span>
                                     {member.birthDate && member.birthDate.trim() && <span>🎂 {format(new Date(member.birthDate + 'T00:00:00'), 'dd/MM/yyyy')}</span>}
                                     {member.email && <span className="flex items-center gap-1 text-slate-500"><Mail className="w-3 h-3" /> {member.email}</span>}
                                     {member.phoneNumber && <span className="flex items-center gap-1 text-slate-500"><Phone className="w-3 h-3" /> {member.phoneNumber}</span>}
