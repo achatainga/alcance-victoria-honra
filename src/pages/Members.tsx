@@ -281,7 +281,7 @@ export default function Members() {
                                         member.status === 'graduado' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
                                             'bg-slate-800 text-slate-500 border-slate-700'
                                         }`}>{member.status}</span>
-                                    {member.birthDate && <span>🎂 {format(new Date(member.birthDate), 'dd/MM/yyyy')}</span>}
+                                    {member.birthDate && member.birthDate.trim() && <span>🎂 {format(new Date(member.birthDate + 'T00:00:00'), 'dd/MM/yyyy')}</span>}
                                     {member.email && <span className="flex items-center gap-1 text-slate-500"><Mail className="w-3 h-3" /> {member.email}</span>}
                                     {member.phoneNumber && <span className="flex items-center gap-1 text-slate-500"><Phone className="w-3 h-3" /> {member.phoneNumber}</span>}
                                 </div>
@@ -414,7 +414,7 @@ export default function Members() {
                                                         <p className="text-xs text-slate-400">
                                                             {member.email && `📧 ${member.email}`}
                                                             {member.phoneNumber && ` 📱 ${member.phoneNumber}`}
-                                                            {member.birthDate && ` 🎂 ${format(new Date(member.birthDate), 'dd/MM/yyyy')}`}
+                                                            {member.birthDate && member.birthDate.trim() && ` 🎂 ${format(new Date(member.birthDate + 'T00:00:00'), 'dd/MM/yyyy')}`}
                                                         </p>
                                                     </div>
                                                     {mIdx > 0 && (
