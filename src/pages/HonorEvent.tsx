@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { db } from '../lib/firebase';
-import { doc, updateDoc, arrayUnion, onSnapshot } from 'firebase/firestore';
-import { format, parseISO } from 'date-fns';
+import { doc, updateDoc, arrayUnion, onSnapshot, collection } from 'firebase/firestore';
+import { format, parseISO, isSameMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { IKContext, IKUpload } from 'imagekitio-react';
 import {
@@ -16,6 +16,8 @@ interface HonorPlan {
     title: string;
     targetDate: string;
     publicMessage: string;
+    description?: string;
+    honoreeIds?: string[];
     financialTarget?: number;
     contributionLink?: string;
     pagoMovil?: {
@@ -24,15 +26,31 @@ interface HonorPlan {
         bank: string;
     };
     qrUrl?: string;
-    photos?: string[]; // Array of photo URLs
+    photos?: string[];
+    news?: NewsItem[];
+}
+
+interface NewsItem {
+    id: string;
+    text: string;
+    timestamp: any;
+}
+
+interface Member {
+    id: string;
+    fullName: string;
+    birthDate: string;
+    type: string;
 }
 
 export default function HonorEvent() {
     const { id } = useParams();
     const [plan, setPlan] = useState<HonorPlan | null>(null);
+    const [members, setMembers] = useState<Member[]>([]);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
     const [copiedField, setCopiedField] = useState<string | null>(null);
+    const [newsText, setNewsText] = useState('');
 
     useEffect(() => {
         if (!id) return;
@@ -42,7 +60,12 @@ export default function HonorEvent() {
             }
             setLoading(false);
         });
-        return () => unsub();
+        
+        const unsubMembers = onSnapshot(collection(db, 'members'), (snap) => {
+            setMembers(snap.docs.map(d => ({ id: d.id, ...d.data() } as Member)));
+        });
+        
+        return () => { unsub(); unsubMembers(); };
     }, [id]);
 
     const onUploadError = (err: any) => {
@@ -226,6 +249,92 @@ export default function HonorEvent() {
                         )}
                     </div>
                 )}
+
+                {/* Birthdays This Month */}
+                {(() => {
+                    const honorees = members.filter(m => plan.honoreeIds?.includes(m.id));
+                    const eventDate = plan.targetDate ? parseISO(plan.targetDate) : new Date();
+                    const birthdays = honorees.filter(m => m.birthDate && isSameMonth(parseISO(m.birthDate), eventDate));
+                    
+                    if (birthdays.length === 0) return null;
+                    
+                    return (
+                        <div className="bg-gradient-to-br from-pink-500/10 to-purple-500/10 border border-pink-500/20 rounded-2xl p-6">
+                            <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
+                                🎂 Cumpleaños del Mes
+                            </h3>
+                            <div className="space-y-2">
+                                {birthdays.map(m => (
+                                    <div key={m.id} className="bg-slate-900/50 rounded-lg p-3 flex items-center justify-between">
+                                        <span className="text-white font-medium">{m.fullName}</span>
+                                        <span className="text-pink-400 text-sm">{format(parseISO(m.birthDate), 'd MMM', { locale: es })}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    );
+                })()}
+
+                {/* Event Details */}
+                {plan.description && (
+                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+                        <h3 className="text-lg font-bold text-white mb-3">📋 Detalles del Evento</h3>
+                        <p className="text-slate-300 whitespace-pre-line leading-relaxed">{plan.description}</p>
+                    </div>
+                )}
+
+                {/* News Wall */}
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+                    <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                        📢 Muro de Noticias
+                    </h3>
+                    
+                    <div className="space-y-3 mb-4">
+                        {plan.news && plan.news.length > 0 ? (
+                            plan.news.map(item => (
+                                <div key={item.id} className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
+                                    <p className="text-slate-200 mb-2">{item.text}</p>
+                                    <span className="text-xs text-slate-500">{item.timestamp?.toDate ? format(item.timestamp.toDate(), 'dd MMM HH:mm', { locale: es }) : ''}</span>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-slate-500 text-sm text-center py-4">No hay noticias aún</p>
+                        )}
+                    </div>
+                    
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            value={newsText}
+                            onChange={e => setNewsText(e.target.value)}
+                            placeholder="Escribe una noticia o actualización..."
+                            className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white text-sm"
+                            onKeyDown={async (e) => {
+                                if (e.key === 'Enter' && newsText.trim() && id) {
+                                    await updateDoc(doc(db, 'honor_plans', id), {
+                                        news: arrayUnion({ id: Date.now().toString(), text: newsText.trim(), timestamp: new Date() })
+                                    });
+                                    setNewsText('');
+                                    toast.success('Noticia publicada');
+                                }
+                            }}
+                        />
+                        <button
+                            onClick={async () => {
+                                if (newsText.trim() && id) {
+                                    await updateDoc(doc(db, 'honor_plans', id), {
+                                        news: arrayUnion({ id: Date.now().toString(), text: newsText.trim(), timestamp: new Date() })
+                                    });
+                                    setNewsText('');
+                                    toast.success('Noticia publicada');
+                                }
+                            }}
+                            className="bg-amber-500 hover:bg-amber-600 text-slate-900 px-4 py-2 rounded-lg font-bold text-sm"
+                        >
+                            Publicar
+                        </button>
+                    </div>
+                </div>
 
                 {/* Photo Gallery & Upload */}
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
