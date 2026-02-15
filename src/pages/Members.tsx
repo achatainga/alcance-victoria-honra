@@ -131,10 +131,10 @@ export default function Members() {
     };
 
     // Update status when type changes if current status is invalid
-    const handleTypeChange = (newType: any) => {
+    const handleTypeChange = (newType: Member['type']) => {
         const allowed = getAllowedStatuses(newType);
-        const newStatus = allowed.includes(formData.status) ? formData.status : allowed[0];
-        setFormData({ ...formData, type: newType, status: newStatus as any });
+        const newStatus = allowed.includes(formData.status) ? formData.status : (allowed[0] as Member['status']);
+        setFormData({ ...formData, type: newType, status: newStatus });
     };
 
     const filteredMembers = members.filter(m => {
