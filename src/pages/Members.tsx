@@ -65,11 +65,16 @@ export default function Members() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
+            // Remove undefined fields
+            const cleanData = Object.fromEntries(
+                Object.entries(formData).filter(([_, v]) => v !== undefined && v !== '')
+            );
+            
             if (editingId) {
-                await updateDoc(doc(db, 'members', editingId), formData);
+                await updateDoc(doc(db, 'members', editingId), cleanData);
                 toast.success('Miembro actualizado');
             } else {
-                await addDoc(collection(db, 'members'), formData);
+                await addDoc(collection(db, 'members'), cleanData);
                 toast.success('Miembro agregado');
             }
             setShowModal(false);
