@@ -252,9 +252,42 @@ export default function HonorEvent() {
 
                 {/* Birthdays This Month */}
                 {(() => {
-                    const honorees = members.filter(m => plan.honoreeIds?.includes(m.id));
+                    console.log('DEBUG - plan.honoreeIds:', plan.honoreeIds);
+                    console.log('DEBUG - members:', members.length);
+                    
+                    if (!plan.honoreeIds || plan.honoreeIds.length === 0) {
+                        console.log('DEBUG - No honoreeIds');
+                        return null;
+                    }
+                    
+                    const honorees = members.filter(m => plan.honoreeIds.includes(m.id));
+                    console.log('DEBUG - honorees:', honorees.map(h => h.fullName));
+                    
+                    if (honorees.length === 0) {
+                        console.log('DEBUG - No honorees found');
+                        return null;
+                    }
+                    
                     const eventDate = plan.targetDate ? parseISO(plan.targetDate) : new Date();
-                    const birthdays = honorees.filter(m => m.birthDate && isSameMonth(parseISO(m.birthDate), eventDate));
+                    console.log('DEBUG - eventDate:', eventDate);
+                    
+                    const birthdays = honorees.filter(m => {
+                        if (!m.birthDate || !m.birthDate.trim()) {
+                            console.log('DEBUG - No birthDate for:', m.fullName);
+                            return false;
+                        }
+                        try {
+                            const bDate = parseISO(m.birthDate);
+                            const same = isSameMonth(bDate, eventDate);
+                            console.log(`DEBUG - ${m.fullName}: ${m.birthDate} -> ${same}`);
+                            return same;
+                        } catch (e) {
+                            console.log('DEBUG - Parse error for:', m.fullName, e);
+                            return false;
+                        }
+                    });
+                    
+                    console.log('DEBUG - birthdays:', birthdays.map(b => b.fullName));
                     
                     if (birthdays.length === 0) return null;
                     
