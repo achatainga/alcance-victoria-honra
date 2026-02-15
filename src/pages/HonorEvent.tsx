@@ -250,7 +250,7 @@ export default function HonorEvent() {
                     </div>
                 )}
 
-                {/* Birthdays This Month */}
+                {/* Birthdays of Honorees */}
                 {(() => {
                     console.log('DEBUG - plan.honoreeIds:', plan.honoreeIds);
                     console.log('DEBUG - members:', members.length);
@@ -260,7 +260,7 @@ export default function HonorEvent() {
                         return (
                             <div className="bg-gradient-to-br from-pink-500/10 to-purple-500/10 border border-pink-500/20 rounded-2xl p-6">
                                 <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
-                                    🎂 Cumpleaños del Mes
+                                    🎂 Cumpleaños de los Homenajeados
                                 </h3>
                                 <p className="text-slate-400 text-sm">No hay homenajeados asignados a este evento</p>
                             </div>
@@ -275,23 +275,10 @@ export default function HonorEvent() {
                         return null;
                     }
                     
-                    const eventDate = plan.targetDate ? parseISO(plan.targetDate) : new Date();
-                    console.log('DEBUG - eventDate:', eventDate);
-                    
-                    const birthdays = honorees.filter(m => {
-                        if (!m.birthDate || !m.birthDate.trim()) {
-                            console.log('DEBUG - No birthDate for:', m.fullName);
-                            return false;
-                        }
-                        try {
-                            const bDate = parseISO(m.birthDate);
-                            const same = bDate.getMonth() === eventDate.getMonth();
-                            console.log(`DEBUG - ${m.fullName}: ${m.birthDate} (month ${bDate.getMonth()}) -> ${same}`);
-                            return same;
-                        } catch (e) {
-                            console.log('DEBUG - Parse error for:', m.fullName, e);
-                            return false;
-                        }
+                    const birthdays = honorees.filter(m => m.birthDate && m.birthDate.trim()).sort((a, b) => {
+                        const dateA = parseISO(a.birthDate);
+                        const dateB = parseISO(b.birthDate);
+                        return dateA.getMonth() - dateB.getMonth() || dateA.getDate() - dateB.getDate();
                     });
                     
                     console.log('DEBUG - birthdays:', birthdays.map(b => b.fullName));
@@ -300,9 +287,9 @@ export default function HonorEvent() {
                         return (
                             <div className="bg-gradient-to-br from-pink-500/10 to-purple-500/10 border border-pink-500/20 rounded-2xl p-6">
                                 <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
-                                    🎂 Cumpleaños del Mes
+                                    🎂 Cumpleaños de los Homenajeados
                                 </h3>
-                                <p className="text-slate-400 text-sm">No hay cumpleaños este mes</p>
+                                <p className="text-slate-400 text-sm">No hay fechas de cumpleaños registradas</p>
                             </div>
                         );
                     }
@@ -310,7 +297,7 @@ export default function HonorEvent() {
                     return (
                         <div className="bg-gradient-to-br from-pink-500/10 to-purple-500/10 border border-pink-500/20 rounded-2xl p-6">
                             <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
-                                🎂 Cumpleaños del Mes
+                                🎂 Cumpleaños de los Homenajeados
                             </h3>
                             <div className="space-y-2">
                                 {birthdays.map(m => (
