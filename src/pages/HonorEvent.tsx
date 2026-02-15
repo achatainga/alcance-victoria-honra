@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { db } from '../lib/firebase';
 import { doc, updateDoc, arrayUnion, onSnapshot, collection } from 'firebase/firestore';
-import { format, parseISO, isSameMonth } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { IKContext, IKUpload } from 'imagekitio-react';
 import {
@@ -285,8 +285,8 @@ export default function HonorEvent() {
                         }
                         try {
                             const bDate = parseISO(m.birthDate);
-                            const same = isSameMonth(bDate, eventDate);
-                            console.log(`DEBUG - ${m.fullName}: ${m.birthDate} -> ${same}`);
+                            const same = bDate.getMonth() === eventDate.getMonth();
+                            console.log(`DEBUG - ${m.fullName}: ${m.birthDate} (month ${bDate.getMonth()}) -> ${same}`);
                             return same;
                         } catch (e) {
                             console.log('DEBUG - Parse error for:', m.fullName, e);
