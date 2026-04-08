@@ -58,30 +58,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Handle redirect result first
-        getRedirectResult(auth).then(async (result) => {
-            if (result) {
-                // Try to get birthday from Google People API
-                const { GoogleAuthProvider } = await import('firebase/auth');
-                const googleCredential = GoogleAuthProvider.credentialFromResult(result);
+        let mounted = true;
+
+        const initAuth = async () => {
+            try {
+                // Handle redirect result first
+                console.log('Checking redirect result...');
+                const result = await getRedirectResult(auth);
                 
-                if (googleCredential?.accessToken) {
-                    const birthDate = await fetchGoogleBirthday(googleCredential.accessToken);
-                    if (birthDate) {
-                        try {
-                            const userRef = doc(db, 'users', result.user.uid);
-                            await updateDoc(userRef, { birthDate });
-                        } catch (error) {
-                            console.warn('Could not update birthDate:', error);
+                if (result && mounted) {
+                    console.log('Redirect result found:', result.user.email);
+                    // Try to get birthday from Google People API
+                    const { GoogleAuthProvider } = await import('firebase/auth');
+                    const googleCredential = GoogleAuthProvider.credentialFromResult(result);
+                    
+                    if (googleCredential?.accessToken) {
+                        const birthDate = await fetchGoogleBirthday(googleCredential.accessToken);
+                        if (birthDate) {
+                            try {
+                                const userRef = doc(db, 'users', result.user.uid);
+                                await updateDoc(userRef, { birthDate });
+                                console.log('Birthday updated:', birthDate);
+                            } catch (error) {
+                                console.warn('Could not update birthDate:', error);
+                            }
                         }
                     }
+                } else {
+                    console.log('No redirect result');
                 }
+            } catch (error) {
+                console.error('Error handling redirect:', error);
             }
-        }).catch((error) => {
-            console.error('Error handling redirect:', error);
-        });
 
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            // Now set up auth state listener
+            const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
                 try {
                     // Check if user exists in Firestore
@@ -174,9 +185,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setUser(null);
             }
             setLoading(false);
+            });
+
+            return unsubscribe;
+        };
+
+        initAuth().then(unsubscribe => {
+            if (mounted && unsubscribe) {
+                return () => {
+                    mounted = false;
+                    unsubscribe();
+                };
+            }
         });
 
-        return () => unsubscribe();
+        return () => {
+            mounted = false;
+        };
     }, []);
 
     const signInWithGoogle = async () => {

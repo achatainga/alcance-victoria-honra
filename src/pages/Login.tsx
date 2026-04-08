@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { Sparkles } from 'lucide-react'; // Simulating icons
 
 export default function Login() {
-    const { signInWithGoogle, user } = useAuth();
+    const { signInWithGoogle, user, loading } = useAuth();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -12,6 +12,17 @@ export default function Login() {
             navigate('/dashboard');
         }
     }, [user, navigate]);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-amber-500 border-t-transparent mx-auto mb-4"></div>
+                    <p className="text-slate-400">Verificando sesión...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
