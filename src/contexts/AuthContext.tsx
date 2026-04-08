@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import {
-    signInWithPopup,
+    signInWithRedirect,
+    getRedirectResult,
     signOut,
     onAuthStateChanged
 } from 'firebase/auth';
@@ -57,6 +58,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        // Handle redirect result first
+        getRedirectResult(auth).then(async (result) => {
+            if (result) {
+                // Try to get birthday from Google People API
+                const { GoogleAuthProvider } = await import('firebase/auth');
+                const googleCredential = GoogleAuthProvider.credentialFromResult(result);
+                
+                if (googleCredential?.accessToken) {
+                    const birthDate = await fetchGoogleBirthday(googleCredential.accessToken);
+                    if (birthDate) {
+                        try {
+                            const userRef = doc(db, 'users', result.user.uid);
+                            await updateDoc(userRef, { birthDate });
+                        } catch (error) {
+                            console.warn('Could not update birthDate:', error);
+                        }
+                    }
+                }
+            }
+        }).catch((error) => {
+            console.error('Error handling redirect:', error);
+        });
+
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
                 try {
@@ -157,23 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const signInWithGoogle = async () => {
         try {
-            const result = await signInWithPopup(auth, googleProvider);
-            
-            // Try to get birthday from Google People API
-            const { GoogleAuthProvider } = await import('firebase/auth');
-            const googleCredential = GoogleAuthProvider.credentialFromResult(result);
-            
-            if (googleCredential?.accessToken) {
-                const birthDate = await fetchGoogleBirthday(googleCredential.accessToken);
-                if (birthDate) {
-                    try {
-                        const userRef = doc(db, 'users', result.user.uid);
-                        await updateDoc(userRef, { birthDate });
-                    } catch (error) {
-                        console.warn('Could not update birthDate:', error);
-                    }
-                }
-            }
+            await signInWithRedirect(auth, googleProvider);
         } catch (error) {
             console.error("Error signing in with Google", error);
             throw error;
