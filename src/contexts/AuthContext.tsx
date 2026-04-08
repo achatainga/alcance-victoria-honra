@@ -57,8 +57,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        let mounted = true;
-
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
                 try {
@@ -154,10 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setLoading(false);
         });
 
-        return () => {
-            mounted = false;
-            unsubscribe();
-        };
+        return () => unsubscribe();
     }, []);
 
     const signInWithGoogle = async () => {
