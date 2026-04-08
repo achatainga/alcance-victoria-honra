@@ -59,9 +59,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
-                // Check if user exists in Firestore
-                const userRef = doc(db, 'users', firebaseUser.uid);
-                const userSnap = await getDoc(userRef);
+                try {
+                    // Check if user exists in Firestore
+                    const userRef = doc(db, 'users', firebaseUser.uid);
+                    const userSnap = await getDoc(userRef);
 
                 let userData: UserProfile;
 
@@ -138,7 +139,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     // Continue without FCM token
                 }
 
-                setUser(userData);
+                    setUser(userData);
+                } catch (error) {
+                    console.error('Error loading user data:', error);
+                    // If Firestore fails, sign out the user
+                    await signOut(auth);
+                    setUser(null);
+                }
             } else {
                 setUser(null);
             }
@@ -159,8 +166,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (googleCredential?.accessToken) {
                 const birthDate = await fetchGoogleBirthday(googleCredential.accessToken);
                 if (birthDate) {
-                    const userRef = doc(db, 'users', result.user.uid);
-                    await updateDoc(userRef, { birthDate });
+                    try {
+                        const userRef = doc(db, 'users', result.user.uid);
+                        await updateDoc(userRef, { birthDate });
+                    } catch (error) {
+                        console.warn('Could not update birthDate:', error);
+                    }
                 }
             }
         } catch (error) {
