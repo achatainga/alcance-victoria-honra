@@ -64,10 +64,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             try {
                 // Handle redirect result first
                 console.log('Checking redirect result...');
+                console.log('Current URL:', window.location.href);
+                console.log('LocalStorage keys:', Object.keys(localStorage));
+                
                 const result = await getRedirectResult(auth);
                 
                 if (result && mounted) {
-                    console.log('Redirect result found:', result.user.email);
+                    console.log('✅ Redirect result found:', result.user.email);
                     // Try to get birthday from Google People API
                     const { GoogleAuthProvider } = await import('firebase/auth');
                     const googleCredential = GoogleAuthProvider.credentialFromResult(result);
@@ -85,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         }
                     }
                 } else {
-                    console.log('No redirect result');
+                    console.log('❌ No redirect result');
                 }
             } catch (error) {
                 console.error('Error handling redirect:', error);
