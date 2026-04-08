@@ -109,40 +109,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
                 // --- SAVE FCM TOKEN ---
                 try {
+                    // Skip if notifications not supported
+                    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+                        console.log('Notifications not supported, skipping FCM token');
+                        setUser(userData);
+                        setLoading(false);
+                        return;
+                    }
+
                     const permission = await Notification.requestPermission();
                     if (permission === 'granted') {
-                        // We need to register SW here or rely on App.tsx registration? 
-                        // It's cleaner to just get the token if registration exists, but let's be robust.
-                        // Ideally App.tsx handles the initial registration. 
-                        // But we can try getting the token.
-
-                        // NOTE: We are importing messaging from ../lib/firebase
-                        // We need to import getToken from firebase/messaging at the top
-
-                        // Construct the SW URL with env vars (redundant but safe)
-                        const swUrl = new URL('/firebase-messaging-sw.js', window.location.origin);
-                        ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId'].forEach(key => {
-                            swUrl.searchParams.append(key, import.meta.env[`VITE_FIREBASE_${key.replace(/[A-Z]/g, letter => `_${letter}`).toUpperCase()}`]);
-                        });
-
                         const registration = await navigator.serviceWorker.getRegistration();
 
-                        if (registration) {
+                        if (registration && messaging) {
                             const token = await getToken(messaging, {
                                 vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
                                 serviceWorkerRegistration: registration
                             });
 
-                            if (token) {
-                                if (userData.fcmToken !== token) {
-                                    await updateDoc(userRef, { fcmToken: token });
-                                    userData.fcmToken = token;
-                                }
+                            if (token && userData.fcmToken !== token) {
+                                await updateDoc(userRef, { fcmToken: token });
+                                userData.fcmToken = token;
                             }
                         }
                     }
                 } catch (error) {
-                    console.error("Error saving FCM token:", error);
+                    console.warn("FCM token not available:", error);
+                    // Continue without FCM token
                 }
 
                 setUser(userData);

@@ -18,6 +18,12 @@ export default function App() {
   useEffect(() => {
     const requestPermission = async () => {
       try {
+        // Skip if notifications not supported
+        if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+          console.log('Notifications not supported');
+          return;
+        }
+
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
           // Construct the SW URL with env vars
@@ -39,7 +45,8 @@ export default function App() {
           // TODO: Save token to user profile in Firestore
         }
       } catch (error) {
-        console.error('Error requesting notification permission:', error);
+        // Silent fail - don't block app if notifications fail
+        console.warn('Notifications disabled:', error);
       }
     };
 
