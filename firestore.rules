@@ -35,13 +35,42 @@ service cloud.firestore {
     }
 
     // Members collection
-    // - Readers/Congregants can READ (to see birthdays)
+    // - All authenticated users can READ (to see birthdays and for self-registration linking)
     // - Admins/Editors can CREATE/UPDATE/DELETE
     // - Users can CREATE/UPDATE their OWN record (via self-registration)
     match /members/{memberId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated(); // Allow self-registration
-      allow update: if isAuthenticated() && (isAdmin() || request.auth.uid == resource.data.linkedUserId);
+      allow update: if isAuthenticated(); // Allow updates for linking
+      allow delete: if isAdmin();
+    }
+
+    // Honor Plans collection
+    // - All authenticated users can READ active/planning plans
+    // - Only admins can CREATE/UPDATE/DELETE
+    match /honor_plans/{planId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Contributions collection
+    // - All authenticated users can READ
+    // - All authenticated users can CREATE (to contribute)
+    // - Only admins can UPDATE/DELETE
+    match /contributions/{contributionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Events collection (if exists)
+    match /events/{eventId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
       allow delete: if isAdmin();
     }
   }
